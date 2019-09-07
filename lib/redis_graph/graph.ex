@@ -91,6 +91,7 @@ defmodule RedisGraph.Graph do
         else
           query_string
         end
+
       IO.inspect(query_string)
       {:ok, query(graph, query_string)}
     end

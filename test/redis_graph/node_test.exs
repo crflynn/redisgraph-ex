@@ -39,7 +39,9 @@ defmodule RedisGraph.NodeTest do
   test "compares two Nodes correctly" do
     # different ids
     mynode = Node.new(%{id: "a", alias: "john", label: "person", properties: %{name: "John Doe"}})
-    othernode = Node.new(%{id: "b", alias: "john", label: "person", properties: %{name: "John Doe"}})
+
+    othernode =
+      Node.new(%{id: "b", alias: "john", label: "person", properties: %{name: "John Doe"}})
 
     assert mynode != othernode
 
