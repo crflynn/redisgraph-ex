@@ -1,6 +1,8 @@
 defmodule RedisGraph.Util do
-  def random_string(length \\ 10) do
-    to_string(Enum.take_random(?a..?z, length))
+
+  def random_string(n \\ 10) do
+    1..n
+    |> Enum.reduce("", fn _, acc -> acc <> to_string(Enum.take_random(?a..?z, 1)) end)
   end
 
   def quote_string(v) when is_binary(v) do

@@ -27,12 +27,12 @@ defmodule RedisGraph.Edge do
 
   def left == right do
     cond do
-      !is_nil(left.id) && !is_nil(right.id) && Kernel.==(left.id, right.id) -> true
+      not is_nil(left.id) and not is_nil(right.id) and Kernel.==(left.id, right.id) -> true
       left.src_node != right.src_node -> false
       left.dest_node != right.dest_node -> false
       left.relation != right.relation -> false
       map_size(left.properties) != map_size(right.properties) -> false
-      !Map.equal?(left.properties, right.properties) -> false
+      not Map.equal?(left.properties, right.properties) -> false
       true -> true
     end
   end
