@@ -61,8 +61,8 @@ defmodule RedisGraph.Graph do
 
   def add_edge(graph, edge) do
     cond do
-      !node_in_graph?(graph, edge.src_node) -> {:error, "source node not in graph"}
-      !node_in_graph?(graph, edge.dest_node) -> {:error, "destination node not in graph"}
+      not node_in_graph?(graph, edge.src_node) -> {:error, "source node not in graph"}
+      not node_in_graph?(graph, edge.dest_node) -> {:error, "destination node not in graph"}
       true -> {:ok, %{graph | edges: graph.edges ++ [edge]}}
     end
   end
