@@ -43,9 +43,60 @@ defmodule RedisGraph.GraphTest do
   end
 
   test "flushes a graph" do
-  end
+    {:ok, conn} = Redix.start_link("redis://localhost:6379")
+    mygraph = Graph.new(%{conn: conn})
+
+    # emptry graph flush results in error
+    {:error, _} = Graph.flush(mygraph)
+
+    src_node = Node.new(%{alias: "p", label: "person", properties: %{name: "John Doe"}})
+    dest_node = Node.new(%{alias: "j", label: "place", properties: %{name: "Japan"}})
+
+    {mygraph, src_node} = Graph.add_node(mygraph, src_node)
+    {mygraph, dest_node} = Graph.add_node(mygraph, dest_node)
+
+    myedge =
+      Edge.new(%{
+            relation: "trip",
+            src_node: src_node,
+            dest_node: dest_node,
+            properties: %{purpose: "pleasure"}
+               })
+
+    {:ok, mygraph} = Graph.add_edge(mygraph, myedge)
+
+    {:ok, mygraph} = Graph.flush(mygraph)
+
+    # flushed graph is empty
+    assert %{} == mygraph.nodes
+    assert [] == mygraph.edges
+ end
 
   test "commits a graph" do
+    {:ok, conn} = Redix.start_link("redis://localhost:6379")
+    mygraph = Graph.new(%{conn: conn})
+
+    src_node = Node.new(%{alias: "p", label: "person", properties: %{name: "John Doe"}})
+    dest_node = Node.new(%{alias: "j", label: "place", properties: %{name: "Japan"}})
+
+    {mygraph, src_node} = Graph.add_node(mygraph, src_node)
+    {mygraph, dest_node} = Graph.add_node(mygraph, dest_node)
+
+    myedge =
+      Edge.new(%{
+            relation: "trip",
+            src_node: src_node,
+            dest_node: dest_node,
+            properties: %{purpose: "pleasure"}
+               })
+
+    {:ok, mygraph} = Graph.add_edge(mygraph, myedge)
+
+    {:ok, %QueryResult{statistics: stats}} = Graph.commit(mygraph)
+
+    # ensure the objects were created
+    assert Map.get(stats, "Nodes created") == "2"
+    assert Map.get(stats, "Relationships created") == "1"
   end
 
   test "generates an execution plan" do

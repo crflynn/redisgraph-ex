@@ -94,9 +94,7 @@ defmodule RedisGraph.Graph do
           query_string
         end
 
-      Logger.debug(query_string)
-
-      {:ok, query(graph, query_string)}
+      query(graph, query_string)
     end
   end
 
@@ -106,23 +104,28 @@ defmodule RedisGraph.Graph do
         {:error, "graph is empty"}
 
       {:ok, _result} ->
-        {:ok, %{graph | nodes: %{}, edges: []}}
+        {:ok, %{graph | nodes: %{}, edges: [], labels: [], relationship_types: [], properties: []}}
+    end
+  end
+
+  defp execute_command(graph, command) do
+    Logger.debug(Enum.join(command, " "))
+
+    case Redix.command(graph.conn, command) do
+      {:ok, result} -> {:ok, QueryResult.new(%{graph: graph, raw_result_set: result})}
+      {:error, _} = error -> error
     end
   end
 
   def query(graph, q) do
-    Logger.debug(q)
-
-    case Redix.command(graph.conn, ["GRAPH.QUERY", graph.name, q, "--compact"]) do
-      {:ok, result} -> QueryResult.new(%{graph: graph, raw_result_set: result})
-      {:error, result} -> result
-    end
+    command = ["GRAPH.QUERY", graph.name, q, "--compact"]
+    execute_command(graph, command)
   end
 
   def execution_plan(graph, q) do
-    Logger.debug(q)
+    command = ["GRAPH.EXPLAIN", graph.name, q]
 
-    case Redix.command(graph.conn, ["GRAPH.EXPLAIN", graph.name, q]) do
+    case Redix.command(graph.conn, command) do
       {:error, _} = error ->
         error
 
@@ -133,7 +136,8 @@ defmodule RedisGraph.Graph do
   end
 
   def delete(graph) do
-    Redix.command(graph.conn, ["GRAPH.DELETE", graph.name])
+    command = ["GRAPH.DELETE", graph.name]
+    execute_command(graph, command)
   end
 
   def merge(graph, pattern) do
