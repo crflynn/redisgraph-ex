@@ -104,7 +104,8 @@ defmodule RedisGraph.Graph do
         {:error, "graph is empty"}
 
       {:ok, _result} ->
-        {:ok, %{graph | nodes: %{}, edges: [], labels: [], relationship_types: [], properties: []}}
+        {:ok,
+         %{graph | nodes: %{}, edges: [], labels: [], relationship_types: [], properties: []}}
     end
   end
 
@@ -112,8 +113,11 @@ defmodule RedisGraph.Graph do
     Logger.debug(Enum.join(command, " "))
 
     case Redix.command(graph.conn, command) do
-      {:ok, result} -> {:ok, QueryResult.new(%{graph: graph, raw_result_set: result})}
-      {:error, _} = error -> error
+      {:ok, result} ->
+        {:ok, QueryResult.new(%{graph: graph, raw_result_set: result})}
+
+      {:error, _} = error ->
+        error
     end
   end
 

@@ -57,11 +57,11 @@ defmodule RedisGraph.GraphTest do
 
     myedge =
       Edge.new(%{
-            relation: "trip",
-            src_node: src_node,
-            dest_node: dest_node,
-            properties: %{purpose: "pleasure"}
-               })
+        relation: "trip",
+        src_node: src_node,
+        dest_node: dest_node,
+        properties: %{purpose: "pleasure"}
+      })
 
     {:ok, mygraph} = Graph.add_edge(mygraph, myedge)
 
@@ -70,7 +70,7 @@ defmodule RedisGraph.GraphTest do
     # flushed graph is empty
     assert %{} == mygraph.nodes
     assert [] == mygraph.edges
- end
+  end
 
   test "commits a graph" do
     {:ok, conn} = Redix.start_link("redis://localhost:6379")
@@ -84,11 +84,11 @@ defmodule RedisGraph.GraphTest do
 
     myedge =
       Edge.new(%{
-            relation: "trip",
-            src_node: src_node,
-            dest_node: dest_node,
-            properties: %{purpose: "pleasure"}
-               })
+        relation: "trip",
+        src_node: src_node,
+        dest_node: dest_node,
+        properties: %{purpose: "pleasure"}
+      })
 
     {:ok, mygraph} = Graph.add_edge(mygraph, myedge)
 
@@ -123,7 +123,9 @@ defmodule RedisGraph.GraphTest do
 
     q = "MATCH (p:person)-[]->(j:place {purpose:\"pleasure\"}) RETURN p"
     {:ok, plan} = Graph.execution_plan(mygraph, q)
-    assert plan == "Results\n    Project\n        Conditional Traverse\n            Filter\n                Node By Label Scan\n"
+
+    assert plan ==
+             "Results\n    Project\n        Conditional Traverse\n            Filter\n                Node By Label Scan\n"
   end
 
   test "deletes a graph" do

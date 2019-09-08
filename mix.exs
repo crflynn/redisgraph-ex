@@ -21,7 +21,8 @@ defmodule RedisGraph.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:redix, ">= 0.10.2"}
+      {:redix, ">= 0.10.2"},
+      {:scribe, "~> 0.10"}
     ]
   end
 end

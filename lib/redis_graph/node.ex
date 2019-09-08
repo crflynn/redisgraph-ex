@@ -21,7 +21,11 @@ defmodule RedisGraph.Node do
       |> Enum.map(fn key -> "#{key}:#{Util.quote_string(node.properties[key])}" end)
       |> Enum.join(",")
 
-    "{" <> inner <> "}"
+    if String.length(inner) > 0 do
+      "{" <> inner <> "}"
+    else
+      ""
+    end
   end
 
   def to_query_string(node) do
