@@ -96,7 +96,7 @@ defmodule RedisGraph.QueryResult do
     if is_nil(header) or is_nil(records) do
       ""
     else
-      Scribe.format(results_to_maps(query_result))
+      Scribe.format(results_to_maps(query_result), data: header)
     end
   end
 
