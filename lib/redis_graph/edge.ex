@@ -1,13 +1,47 @@
 defmodule RedisGraph.Edge do
+  @moduledoc """
+  An Edge component relating two Nodes in a Graph.
+
+  Edges must have a source node and destination node, describing a relationship
+  between two entities in a Graph. The nodes must exist in the Graph in order
+  for the edge to be added.
+
+  Edges must have a relation which identifies the type of relationship being
+  described between entities
+
+  Edges, like Nodes, may also have properties, a map of values which describe
+  attributes of the relationship between the associated Nodes.
+  """
   alias RedisGraph.Util
 
-  @enforce_keys [:src_node, :dest_node]
-  defstruct [:src_node, :dest_node, relation: "", properties: %{}]
+  @type t() :: %__MODULE__{
+    src_node: Node.t(),
+    dest_node: Node.t(),
+    relation: String.t(),
+    properties: %{optional(String.t()) => any()}
+  }
 
+  @enforce_keys [:src_node, :dest_node, :relation]
+  defstruct [:src_node, :dest_node, :relation, properties: %{}]
+
+  @doc """
+  Create a new Edge from a map.
+
+  ## Example
+
+      edge = Edge.new(%{
+        src_node: john,
+        dest_node: japan,
+        relation: "visited"
+      })
+  """
+  @spec new(map()) :: t()
   def new(map) do
     struct(__MODULE__, map)
   end
 
+  @doc "Convert an edge's properties to a query-appropriate string."
+  @spec properties_to_string(t()) :: String.t()
   def properties_to_string(edge) do
     inner =
       Map.keys(edge.properties)
@@ -21,6 +55,8 @@ defmodule RedisGraph.Edge do
     end
   end
 
+  @doc "Convert an edge to a query-appropriate string."
+  @spec to_query_string(t()) :: String.t()
   def to_query_string(edge) do
     src_node_string = "(" <> edge.src_node.alias <> ")"
 
@@ -35,6 +71,18 @@ defmodule RedisGraph.Edge do
     src_node_string <> edge_string <> dest_node_string
   end
 
+  @doc """
+  Compare two edges with respect to equality.
+
+  Comparison logic:
+
+  * If the source nodes differ, returns ``false``
+  * If the destination nodes differ, returns ``false``
+  * If the relations differ, returns ``false``
+  * If the properties differ, returns ``false``
+  * Otherwise returns true
+  """
+  @spec t() == t() :: boolean()
   def left == right do
     cond do
       left.src_node != right.src_node -> false
