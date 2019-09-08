@@ -19,7 +19,13 @@ defmodule RedisGraph.Edge do
 
   def to_query_string(edge) do
     src_node_string = "(" <> edge.src_node.alias <> ")"
-    edge_string = "-[:" <> edge.relation <> properties_to_string(edge) <> "]->"
+
+    edge_string =
+      case edge.relation do
+        "" -> "-[" <> properties_to_string(edge) <> "]->"
+        other -> "-[:" <> other <> properties_to_string(edge) <> "]->"
+      end
+
     dest_node_string = "(" <> edge.dest_node.alias <> ")"
 
     src_node_string <> edge_string <> dest_node_string

@@ -4,6 +4,8 @@ defmodule RedisGraph.Graph do
   alias RedisGraph.Util
   alias RedisGraph.QueryResult
 
+  require Logger
+
   @enforce_keys [:conn]
   defstruct [
     :name,
@@ -92,7 +94,8 @@ defmodule RedisGraph.Graph do
           query_string
         end
 
-      IO.inspect(query_string)
+      Logger.debug(query_string)
+
       {:ok, query(graph, query_string)}
     end
   end
@@ -108,20 +111,25 @@ defmodule RedisGraph.Graph do
   end
 
   def query(graph, q) do
+    Logger.debug(q)
+
     case Redix.command(graph.conn, ["GRAPH.QUERY", graph.name, q, "--compact"]) do
       {:ok, result} -> QueryResult.new(%{graph: graph, raw_result_set: result})
       {:error, result} -> result
     end
   end
 
-  defp execution_plan_to_string(plan) do
-    plan
-    |> Enum.join("\n")
-  end
-
   def execution_plan(graph, q) do
-    Redix.command(graph.conn, ["GRAPH.EXPLAIN", graph.name, q])
-    |> execution_plan_to_string
+    Logger.debug(q)
+
+    case Redix.command(graph.conn, ["GRAPH.EXPLAIN", graph.name, q]) do
+      {:error, _} = error ->
+        error
+
+      {:ok, result} ->
+        Logger.debug(result)
+        {:ok, result}
+    end
   end
 
   def delete(graph) do
