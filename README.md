@@ -23,6 +23,14 @@ be found at [https://hexdocs.pm/redisgraph](https://hexdocs.pm/redisgraph).
 
 This library uses [Redix](https://github.com/whatyouhide/redix) to communicate with a redisgraph server.
 
+To launch ``redisgraph`` locally, use
+
+```bash
+docker run -p 6379:6379 -it --rm redislabs/redisgraph
+```
+
+Here is a simple example:
+
 ```elixir
 alias RedisGraph.{Node, Edge, Graph, QueryResult}
 
@@ -89,7 +97,7 @@ query = "MATCH (p:person)-[v:visited]->(c:country) RETURN p.name, p.age, v.purpo
 IO.puts(QueryResult.pretty_print(query_result))
 ```
 
-which gives the results
+which gives the following results:
 
 ```elixir
 # Commit result statistics
