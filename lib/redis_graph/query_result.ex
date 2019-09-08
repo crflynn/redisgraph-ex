@@ -82,20 +82,21 @@ defmodule RedisGraph.QueryResult do
     end
   end
 
-  def pretty_print(%{header: header, result_set: records}) do
+  def results_to_maps(%{header: header, result_set: records} = query_result) do
+    records
+    |> Enum.map(fn r ->
+      r
+      |> Enum.with_index()
+      |> Enum.map(fn {v, idx} -> {Enum.at(header, idx), v} end)
+      |> Enum.into(%{})
+    end)
+  end
+
+  def pretty_print(%{header: header, result_set: records} = query_result) do
     if is_nil(header) or is_nil(records) do
       ""
     else
-      maps =
-        records
-        |> Enum.map(fn r ->
-          r
-          |> Enum.with_index()
-          |> Enum.map(fn {v, idx} -> {Enum.at(header, idx), v} end)
-          |> Enum.into(%{})
-        end)
-
-      Scribe.format(maps)
+      Scribe.format(results_to_maps(query_result))
     end
   end
 
