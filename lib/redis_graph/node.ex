@@ -1,7 +1,7 @@
 defmodule RedisGraph.Node do
   alias RedisGraph.Util
 
-  defstruct [:id, :alias, :label, properties: %{}]
+  defstruct [:alias, :label, properties: %{}]
 
   def new(map) do
     struct(__MODULE__, map)
@@ -46,7 +46,6 @@ defmodule RedisGraph.Node do
 
   def left == right do
     cond do
-      not is_nil(left.id) and not is_nil(right.id) and Kernel.==(left.id, right.id) -> true
       left.label != right.label -> false
       map_size(left.properties) != map_size(right.properties) -> false
       not Map.equal?(left.properties, right.properties) -> false

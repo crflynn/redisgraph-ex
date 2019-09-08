@@ -2,7 +2,7 @@ defmodule RedisGraph.Edge do
   alias RedisGraph.Util
 
   @enforce_keys [:src_node, :dest_node]
-  defstruct [:id, :src_node, :dest_node, relation: "", properties: %{}]
+  defstruct [:src_node, :dest_node, relation: "", properties: %{}]
 
   def new(map) do
     struct(__MODULE__, map)
@@ -37,7 +37,6 @@ defmodule RedisGraph.Edge do
 
   def left == right do
     cond do
-      not is_nil(left.id) and not is_nil(right.id) and Kernel.==(left.id, right.id) -> true
       left.src_node != right.src_node -> false
       left.dest_node != right.dest_node -> false
       left.relation != right.relation -> false
