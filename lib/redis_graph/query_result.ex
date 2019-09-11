@@ -82,7 +82,7 @@ defmodule RedisGraph.QueryResult do
     end
   end
 
-  def results_to_maps(%{header: header, result_set: records}) do
+  def results_to_maps(%{header: header, result_set: records} = _query_result) do
     records
     |> Enum.map(fn r ->
       r
