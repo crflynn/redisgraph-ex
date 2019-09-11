@@ -107,4 +107,117 @@ defmodule RedisGraph do
   ```
 
   """
+  alias RedisGraph.Node
+  alias RedisGraph.Edge
+  alias RedisGraph.Graph
+  alias RedisGraph.QueryResult
+
+  require Logger
+
+  def command(conn, c) do
+    Logger.debug(Enum.join(c, " "))
+
+    case Redix.command(conn, c) do
+      {:ok, result} ->
+        {:ok, QueryResult.new(%{raw_result_set: result})}
+
+      {:error, _reason} = error ->
+        error
+    end
+  end
+
+  def query(conn, name, q) do
+    c = ["GRAPH.QUERY", name, q, "--compact"]
+    command(conn, c)
+  end
+
+  def execution_plan(conn, name, q) do
+    c = ["GRAPH.EXPLAIN", name, q]
+
+    case Redix.command(conn, c) do
+      {:error, _reason} = error ->
+        error
+
+      {:ok, result} ->
+        Logger.debug(result)
+        {:ok, result}
+    end
+  end
+
+  def commit(conn, graph) do
+    if length(graph.edges) == 0 and map_size(graph.nodes) == 0 do
+      {:error, "graph is empty"}
+    else
+      nodes_string =
+        graph.nodes
+        |> Enum.map(fn {_label, node} -> Node.to_query_string(node) end)
+        |> Enum.join(",")
+
+      edges_string =
+        graph.edges
+        |> Enum.map(&Edge.to_query_string/1)
+        |> Enum.join(",")
+
+      query_string = "MERGE " <> nodes_string <> "," <> edges_string
+
+      query_string =
+        if String.at(query_string, -1) == "," do
+          String.slice(query_string, 0..-2)
+        else
+          query_string
+        end
+
+      RedisGraph.query(conn, graph.name, query_string)
+    end
+  end
+
+  def delete(conn, name) do
+    command = ["GRAPH.DELETE", name]
+    RedisGraph.command(conn, command)
+  end
+
+  def merge(conn, name, pattern) do
+    RedisGraph.query(conn, name, "MERGE " <> pattern)
+  end
+
+  def flush(conn, graph) do
+    case RedisGraph.commit(conn, graph) do
+      {:error, _reason} = error ->
+        error
+
+      {:ok, _result} ->
+        {:ok, Graph.new(%{name: graph.name})}
+    end
+  end
+
+  # def call_procedure(conn, name, procedure, args \\ [], kwargs \\ %{}) do
+  #   args =
+  #     args
+  #     |> Enum.map(&Util.quote_string/1)
+  #     |> Enum.join(",")
+
+  #   yields = Map.get(kwargs, "y", [])
+
+  #   yields =
+  #   if length(yields) > 0 do
+  #     " YIELD " <> Enum.join(yields, ",")
+  #   else
+  #     ""
+  #   end
+
+  #   q = "CALL " <> procedure <> "(" <> args <> ")" <> yields
+  #   query(conn, name, q)
+  # end
+
+  # def labels(conn, name) do
+  #   call_procedure(conn, name, "db.labels")
+  # end
+
+  # def relationship_types(conn, name) do
+  #   call_procedure(conn, name, "db.relationshipTypes")
+  # end
+
+  # def property_keys(conn, name) do
+  #   call_procedure(conn, name, "db.propertyKeys")
+  # end
 end

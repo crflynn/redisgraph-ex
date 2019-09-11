@@ -5,10 +5,10 @@ defmodule RedisGraph.QueryResult do
   @relationships_deleted "Relationships deleted"
   @properties_set "Properties set"
   @relationships_created "Relationships created"
-  @internal_execution_time "Query internal execution time"
+  @query_internal_execution_time "Query internal execution time"
 
-  @enforce_keys [:graph, :raw_result_set]
-  defstruct [:graph, :raw_result_set, :header, :result_set, :statistics]
+  @enforce_keys [:raw_result_set]
+  defstruct [:raw_result_set, :header, :result_set, :statistics]
 
   def new(map) do
     s = struct(__MODULE__, map)
@@ -39,7 +39,7 @@ defmodule RedisGraph.QueryResult do
       @relationships_created,
       @nodes_deleted,
       @relationships_deleted,
-      @internal_execution_time
+      @query_internal_execution_time
     ]
 
     stats
@@ -82,7 +82,7 @@ defmodule RedisGraph.QueryResult do
     end
   end
 
-  def results_to_maps(%{header: header, result_set: records} = query_result) do
+  def results_to_maps(%{header: header, result_set: records}) do
     records
     |> Enum.map(fn r ->
       r
@@ -128,7 +128,7 @@ defmodule RedisGraph.QueryResult do
     get_stat(query_result, @relationships_deleted)
   end
 
-  def run_time_ms(query_result) do
-    get_stat(query_result, @internal_execution_time)
+  def query_internal_execution_time(query_result) do
+    get_stat(query_result, @query_internal_execution_time)
   end
 end

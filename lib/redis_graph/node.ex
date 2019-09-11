@@ -15,10 +15,10 @@ defmodule RedisGraph.Node do
   alias RedisGraph.Util
 
   @type t() :: %__MODULE__{
-    alias: String.t(),
-    label: String.t(),
-    properties: %{optional(String.t()) => any()}
-  }
+          alias: String.t(),
+          label: String.t(),
+          properties: %{optional(String.t()) => any()}
+        }
 
   defstruct [:alias, :label, properties: %{}]
 
