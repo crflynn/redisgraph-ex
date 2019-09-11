@@ -24,8 +24,7 @@ defmodule RedisGraph do
 
   # Create a graph with the connection
   graph = Graph.new(%{
-    name: "social",
-    conn: conn
+    name: "social"
   })
 
   # Create a node
@@ -69,7 +68,7 @@ defmodule RedisGraph do
   {:ok, graph} = Graph.add_edge(graph, edge)
 
   # Commit the graph to the database
-  {:ok, commit_result} = Graph.commit(graph)
+  {:ok, commit_result} = RedisGraph.commit(conn, graph)
 
   # Print the transaction statistics
   IO.inspect(commit_result.statistics)
@@ -78,7 +77,7 @@ defmodule RedisGraph do
   query = "MATCH (p:person)-[v:visited]->(c:country) RETURN p.name, p.age, v.purpose, c.name"
 
   # Execute the query
-  {:ok, query_result} = Graph.query(graph, query)
+  {:ok, query_result} = RedisGraph.query(conn, graph.name, query)
 
   # Pretty print the results using the Scribe lib
   IO.puts(QueryResult.pretty_print(query_result))

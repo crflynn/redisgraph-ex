@@ -31,6 +31,71 @@ docker run -p 6379:6379 -it --rm redislabs/redisgraph
 
 Here is a simple example:
 
+```elixir
+alias RedisGraph.{Node, Edge, Graph, QueryResult}
+
+# Create a connection using Redix
+{:ok, conn} = Redix.start_link("redis://localhost:6379")
+
+# Create a graph with the connection
+graph = Graph.new(%{
+  name: "social"
+})
+
+# Create a node
+john = Node.new(%{
+  label: "person",
+  properties: %{
+    name: "John Doe",
+    age: 33,
+    gender: "male",
+    status: "single"
+  }
+})
+
+# Add the node to the graph
+# The graph and node are returned
+# The node may be modified if no alias has been set
+# For this reason, nodes should always be added to the graph
+# before creating edges between them.
+{graph, john} = Graph.add_node(graph, john)
+
+# Create a second node
+japan = Node.new(%{
+  label: "country",
+  properties: %{
+    name: "Japan"
+  }
+})
+
+# Add the second node
+{graph, japan} = Graph.add_node(graph, japan)
+
+# Create an edge connecting the two nodes
+edge = Edge.new(%{
+  src_node: john,
+  dest_node: japan,
+  relation: "visited"
+})
+
+# Add the edge to the graph
+# If the nodes are not present, an {:error, error} is returned
+{:ok, graph} = Graph.add_edge(graph, edge)
+
+# Commit the graph to the database
+{:ok, commit_result} = RedisGraph.commit(conn, graph)
+
+# Print the transaction statistics
+IO.inspect(commit_result.statistics)
+
+# Create a query to fetch some data
+query = "MATCH (p:person)-[v:visited]->(c:country) RETURN p.name, p.age, v.purpose, c.name"
+
+# Execute the query
+{:ok, query_result} = RedisGraph.query(conn, graph.name, query)
+
+# Pretty print the results using the Scribe lib
+IO.puts(QueryResult.pretty_print(query_result))
 ```
 
 which gives the following results:
