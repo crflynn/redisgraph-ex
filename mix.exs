@@ -30,8 +30,10 @@ defmodule RedisGraph.MixProject do
     [
       {:redix, ">= 0.10.2"},
       {:scribe, "~> 0.10"},
+
+      # dev
       {:ex_doc, "~> 0.21", only: :dev, runtime: false},
-      {:dialyxir, "~> 0.5", only: [:dev], runtime: false}
+      {:dialyxir, "~> 0.5", only: :dev, runtime: false}
     ]
   end
 end
