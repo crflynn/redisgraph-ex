@@ -1,6 +1,6 @@
 defmodule RedisGraph.Graph do
   @moduledoc """
-  An Graph consisting of `RedisGraph.Nodes` and `RedisGraph.Edges`.
+  A Graph consisting of `RedisGraph.Nodes` and `RedisGraph.Edges`.
 
   A name is required for each graph.
 

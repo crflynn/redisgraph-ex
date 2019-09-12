@@ -1,4 +1,30 @@
 defmodule RedisGraph.QueryResult do
+  @moduledoc """
+  A QueryResult containing returned fields and query metadata.
+
+  ## Example
+
+  ```elixir
+  # Create a query to fetch some data
+  query = "MATCH (p:person)-[v:visited]->(c:country) RETURN p.name, p.age, v.purpose, c.name"
+
+  # Execute the query
+  {:ok, query_result} = RedisGraph.query(conn, graph.name, query)
+
+  # Pretty print the results using the Scribe lib
+  IO.puts(QueryResult.pretty_print(query_result))
+  ```
+
+  which gives the following results:
+
+  ```elixir
+  +----------------+-------------+-----------------+--------------+
+  | "p.name"       | "p.age"     | "v.purpose"     | "c.name"     |
+  +----------------+-------------+-----------------+--------------+
+  | "John Doe"     | 33          | nil             | "Japan"      |
+  +----------------+-------------+-----------------+--------------+
+  ```
+  """
   @labels_added "Labels added"
   @nodes_created "Nodes created"
   @nodes_deleted "Nodes deleted"
@@ -10,6 +36,14 @@ defmodule RedisGraph.QueryResult do
   @enforce_keys [:raw_result_set]
   defstruct [:raw_result_set, :header, :result_set, :statistics]
 
+  @doc """
+  Create a new QueryResult from a map.
+
+  Pass a map with a field `:raw_result_set` which
+  contains the result of a GRAPH.QUERY run against
+  a database using `Redix.command/2` or
+  `RedisGraph.command/2`
+  """
   def new(map) do
     s = struct(__MODULE__, map)
 
@@ -95,7 +129,7 @@ defmodule RedisGraph.QueryResult do
     end)
   end
 
-  @doc "Pretty print a QueryResult to a table using Scribe."
+  @doc "Pretty print a QueryResult to a table using `Scribe`."
   def pretty_print(%{header: header, result_set: records} = query_result) do
     if is_nil(header) or is_nil(records) do
       ""
