@@ -23,6 +23,7 @@ defmodule RedisGraph.QueryResult do
     end
   end
 
+  @doc "Return a boolean indicating emptiness of a QueryResult."
   def is_empty(query_result) do
     if is_nil(query_result.result_set) or length(query_result.result_set) == 0 do
       true
@@ -70,6 +71,7 @@ defmodule RedisGraph.QueryResult do
     end
   end
 
+  @doc "Parse the results of a query into a QueryResult."
   def parse_results(%{raw_result_set: [[header | records] | _statistics]} = query_result) do
     if length(header) > 0 do
       %{
@@ -82,6 +84,7 @@ defmodule RedisGraph.QueryResult do
     end
   end
 
+  @doc "Transform a QueryResult into a list of maps as records."
   def results_to_maps(%{header: header, result_set: records} = _query_result) do
     records
     |> Enum.map(fn r ->
@@ -92,6 +95,7 @@ defmodule RedisGraph.QueryResult do
     end)
   end
 
+  @doc "Pretty print a QueryResult to a table using Scribe."
   def pretty_print(%{header: header, result_set: records} = query_result) do
     if is_nil(header) or is_nil(records) do
       ""
@@ -104,30 +108,37 @@ defmodule RedisGraph.QueryResult do
     Map.get(query_result.statistics, stat, 0)
   end
 
+  @doc "Get the labels added quantity from a QueryResult."
   def labels_added(query_result) do
     get_stat(query_result, @labels_added)
   end
 
+  @doc "Get the nodes created quantity from a QueryResult."
   def nodes_created(query_result) do
     get_stat(query_result, @nodes_created)
   end
 
+  @doc "Get the nodes deleted quantity from a QueryResult."
   def nodes_deleted(query_result) do
     get_stat(query_result, @nodes_deleted)
   end
 
+  @doc "Get the properties set quantity from a QueryResult."
   def properties_set(query_result) do
     get_stat(query_result, @properties_set)
   end
 
+  @doc "Get the relationships created quantity from a QueryResult."
   def relationships_created(query_result) do
     get_stat(query_result, @relationships_created)
   end
 
+  @doc "Get the relationships deleted quantity from a QueryResult."
   def relationships_deleted(query_result) do
     get_stat(query_result, @relationships_deleted)
   end
 
+  @doc "Get the query internal execution time (ms) from a QueryResult."
   def query_internal_execution_time(query_result) do
     get_stat(query_result, @query_internal_execution_time)
   end

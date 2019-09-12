@@ -108,11 +108,34 @@ defmodule RedisGraph do
   """
   alias RedisGraph.Node
   alias RedisGraph.Edge
-  alias RedisGraph.Graph
   alias RedisGraph.QueryResult
 
   require Logger
 
+  @doc """
+  Execute arbitrary command against the database.
+
+  https://oss.redislabs.com/redisgraph/commands/
+
+  Query commands will be a list of strings. They
+  will begin with either GRAPH.QUERY,
+  GRAPH.EXPLAIN, or GRAPH.DELETE.
+
+  The next element will be the name of the graph.
+
+  The third element will be the query command.
+
+  Optionally pass the last element `--compact`
+  for compact results.
+
+  ## Example:
+      [
+        "GRAPH.QUERY",
+        "imdb",
+        "(a:actor)-[:act]->(m:movie {title:'straight outta compton'})",
+        "--compact"
+      ]
+  """
   def command(conn, c) do
     Logger.debug(Enum.join(c, " "))
 
@@ -125,11 +148,21 @@ defmodule RedisGraph do
     end
   end
 
+  @doc """
+  Query on a graph in the database.
+
+  https://oss.redislabs.com/redisgraph/commands/#graphquery
+  """
   def query(conn, name, q) do
     c = ["GRAPH.QUERY", name, q, "--compact"]
     command(conn, c)
   end
 
+  @doc """
+  Fetch the execution plan for a query on a graph.
+
+  https://oss.redislabs.com/redisgraph/commands/#graphexplain
+  """
   def execution_plan(conn, name, q) do
     c = ["GRAPH.EXPLAIN", name, q]
 
@@ -143,6 +176,11 @@ defmodule RedisGraph do
     end
   end
 
+  @doc """
+  Commit a graph to the database using MERGE.
+
+  https://oss.redislabs.com/redisgraph/commands/#merge
+  """
   def commit(conn, graph) do
     if length(graph.edges) == 0 and map_size(graph.nodes) == 0 do
       {:error, "graph is empty"}
@@ -170,23 +208,23 @@ defmodule RedisGraph do
     end
   end
 
+  @doc """
+  Delete a graph from the database.
+
+  https://oss.redislabs.com/redisgraph/commands/#delete
+  """
   def delete(conn, name) do
     command = ["GRAPH.DELETE", name]
     RedisGraph.command(conn, command)
   end
 
+  @doc """
+  Merge a pattern into the graph.
+
+  https://oss.redislabs.com/redisgraph/commands/#merge
+  """
   def merge(conn, name, pattern) do
     RedisGraph.query(conn, name, "MERGE " <> pattern)
-  end
-
-  def flush(conn, graph) do
-    case RedisGraph.commit(conn, graph) do
-      {:error, _reason} = error ->
-        error
-
-      {:ok, _result} ->
-        {:ok, Graph.new(%{name: graph.name})}
-    end
   end
 
   # def call_procedure(conn, name, procedure, args \\ [], kwargs \\ %{}) do
