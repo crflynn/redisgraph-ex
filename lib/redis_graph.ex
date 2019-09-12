@@ -1,7 +1,5 @@
 defmodule RedisGraph do
   @moduledoc """
-  Documentation for RedisGraph.
-
   Provides the components to construct and easily interact with Graph
   entities in a RedisGraph database.
 
@@ -22,7 +20,7 @@ defmodule RedisGraph do
   # Create a connection using Redix
   {:ok, conn} = Redix.start_link("redis://localhost:6379")
 
-  # Create a graph with the connection
+  # Create a graph
   graph = Graph.new(%{
     name: "social"
   })
@@ -106,11 +104,14 @@ defmodule RedisGraph do
   ```
 
   """
-  alias RedisGraph.Node
   alias RedisGraph.Edge
+  alias RedisGraph.Graph
+  alias RedisGraph.Node
   alias RedisGraph.QueryResult
 
   require Logger
+
+  @type connection() :: GenServer.server()
 
   @doc """
   Execute arbitrary command against the database.
@@ -136,6 +137,8 @@ defmodule RedisGraph do
         "--compact"
       ]
   """
+  @spec command(connection(), list(String.t())) ::
+          {:ok, QueryResult.t()} | {:error, any()}
   def command(conn, c) do
     Logger.debug(Enum.join(c, " "))
 
@@ -153,6 +156,8 @@ defmodule RedisGraph do
 
   https://oss.redislabs.com/redisgraph/commands/#graphquery
   """
+  @spec query(connection(), String.t(), String.t()) ::
+          {:ok, QueryResult.t()} | {:error, any()}
   def query(conn, name, q) do
     c = ["GRAPH.QUERY", name, q, "--compact"]
     command(conn, c)
@@ -163,6 +168,8 @@ defmodule RedisGraph do
 
   https://oss.redislabs.com/redisgraph/commands/#graphexplain
   """
+  @spec execution_plan(connection(), String.t(), String.t()) ::
+          {:ok, QueryResult.t()} | {:error, any()}
   def execution_plan(conn, name, q) do
     c = ["GRAPH.EXPLAIN", name, q]
 
@@ -181,6 +188,8 @@ defmodule RedisGraph do
 
   https://oss.redislabs.com/redisgraph/commands/#merge
   """
+  @spec commit(connection(), Graph.t()) ::
+          {:ok, QueryResult.t()} | {:error, any()}
   def commit(conn, graph) do
     if length(graph.edges) == 0 and map_size(graph.nodes) == 0 do
       {:error, "graph is empty"}
@@ -213,6 +222,8 @@ defmodule RedisGraph do
 
   https://oss.redislabs.com/redisgraph/commands/#delete
   """
+  @spec delete(connection(), String.t()) ::
+          {:ok, QueryResult.t()} | {:error, any()}
   def delete(conn, name) do
     command = ["GRAPH.DELETE", name]
     RedisGraph.command(conn, command)
@@ -223,6 +234,8 @@ defmodule RedisGraph do
 
   https://oss.redislabs.com/redisgraph/commands/#merge
   """
+  @spec merge(connection(), String.t(), String.t()) ::
+          {:ok, QueryResult.t()} | {:error, any()}
   def merge(conn, name, pattern) do
     RedisGraph.query(conn, name, "MERGE " <> pattern)
   end

@@ -37,7 +37,7 @@ alias RedisGraph.{Node, Edge, Graph, QueryResult}
 # Create a connection using Redix
 {:ok, conn} = Redix.start_link("redis://localhost:6379")
 
-# Create a graph with the connection
+# Create a graph
 graph = Graph.new(%{
   name: "social"
 })

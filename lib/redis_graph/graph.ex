@@ -13,9 +13,16 @@ defmodule RedisGraph.Graph do
   Edges cannot be added unless both the source node and
   destination node aliases already exist in the graph.
   """
+  alias RedisGraph.Edge
   alias RedisGraph.Node
 
   require Logger
+
+  @type t() :: %__MODULE__{
+          name: String.t(),
+          nodes: %{optional(String.t()) => Node.t()},
+          edges: list(Edge.t())
+        }
 
   @enforce_keys [:name]
   defstruct [
@@ -77,6 +84,7 @@ defmodule RedisGraph.Graph do
   {:ok, graph} = Graph.add_edge(graph, edge)
   ```
   """
+  @spec new(map()) :: t()
   def new(map) do
     struct(__MODULE__, map)
   end
@@ -87,6 +95,7 @@ defmodule RedisGraph.Graph do
   Creates a random string alias for the Node
   if the Node has no alias.
   """
+  @spec add_node(t(), Node.t()) :: {t(), Node.t()}
   def add_node(graph, node) do
     node = Node.set_alias_if_nil(node)
     {%{graph | nodes: Map.put(graph.nodes, node.alias, node)}, node}
@@ -99,6 +108,7 @@ defmodule RedisGraph.Graph do
   graph, then the edge cannot be added. Uses node aliases
   to check graph membership.
   """
+  @spec add_edge(t(), Edge.t()) :: {:ok, t()} | {:error, any()}
   def add_edge(graph, edge) do
     cond do
       not node_in_graph?(graph, edge.src_node) -> {:error, "source node not in graph"}
