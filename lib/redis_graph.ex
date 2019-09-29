@@ -241,6 +241,7 @@ defmodule RedisGraph do
     RedisGraph.query(conn, name, "MERGE " <> pattern)
   end
 
+  @spec call_procedure(connection(), String.t(), String.t(), list(), map()) :: {:ok, list()} | {:error, any()}
   def call_procedure(conn, name, procedure, args \\ [], kwargs \\ %{}) do
     args =
       args
@@ -268,14 +269,20 @@ defmodule RedisGraph do
     end
   end
 
+  @doc "Fetch the response of the db.labels() procedure call."
+  @spec labels(connection(), String.t()) :: {:ok, list()} | {:error, any()}
   def labels(conn, name) do
     call_procedure(conn, name, "db.labels")
   end
 
+  @doc "Fetch the response of the db.relationshipTypes() procedure call."
+  @spec relationship_types(connection(), String.t()) :: {:ok, list()} | {:error, any()}
   def relationship_types(conn, name) do
     call_procedure(conn, name, "db.relationshipTypes")
   end
 
+  @doc "Fetch the response of the db.propertyKeys() procedure call."
+  @spec property_keys(connection(), String.t()) :: {:ok, list()} | {:error, any()}
   def property_keys(conn, name) do
     call_procedure(conn, name, "db.propertyKeys")
   end

@@ -13,7 +13,7 @@ defmodule RedisGraph.Util do
   end
 
   @doc """
-  Surround a string with double quotes if not already.
+  Surround a string with single quotes if not already.
 
   This is used to serialize strings when preparing redisgraph queries.
   If the passed value is not a string, it is returned unchanged

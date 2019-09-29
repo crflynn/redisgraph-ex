@@ -1,7 +1,4 @@
 defmodule RedisGraph.QueryResultTest do
-  alias RedisGraph.Edge
-  alias RedisGraph.Graph
-  alias RedisGraph.Node
   alias RedisGraph.QueryResult
 
   use ExUnit.Case
@@ -9,7 +6,7 @@ defmodule RedisGraph.QueryResultTest do
   @redis_address "redis://localhost:6379"
 
   test "functionality of query result parsing" do
-    {:ok, conn} = Redix.start_link("redis://localhost:6379")
+    {:ok, conn} = Redix.start_link(@redis_address)
 
     sample_graph = RedisGraphTest.build_sample_graph()
 
@@ -29,7 +26,7 @@ defmodule RedisGraph.QueryResultTest do
   end
 
   test "query result properties" do
-    {:ok, conn} = Redix.start_link("redis://localhost:6379")
+    {:ok, conn} = Redix.start_link(@redis_address)
 
     sample_graph = RedisGraphTest.build_sample_graph()
 
