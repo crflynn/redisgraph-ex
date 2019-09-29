@@ -64,6 +64,7 @@ defmodule RedisGraph.Edge do
     edge_string =
       case edge.relation do
         "" -> "-[" <> properties_to_string(edge) <> "]->"
+        nil -> "-[" <> properties_to_string(edge) <> "]->"
         other -> "-[:" <> other <> properties_to_string(edge) <> "]->"
       end
 
@@ -83,9 +84,10 @@ defmodule RedisGraph.Edge do
   * If the properties differ, returns ``false``
   * Otherwise returns true
   """
-  @spec t() == t() :: boolean()
-  def left == right do
+  @spec compare(t(), t()) :: boolean()
+  def compare(left, right) do
     cond do
+      left.id != right.id -> false
       left.src_node != right.src_node -> false
       left.dest_node != right.dest_node -> false
       left.relation != right.relation -> false

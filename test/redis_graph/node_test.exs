@@ -26,47 +26,47 @@ defmodule RedisGraph.NodeTest do
     mynode = Node.new(%{label: "person", properties: %{name: "John Doe"}})
     props = Node.properties_to_string(mynode)
 
-    assert props == "{name:\"John Doe\"}"
+    assert props == "{name:'John Doe'}"
   end
 
   test "gets a query string for the node" do
     mynode = Node.new(%{alias: "john", label: "person", properties: %{name: "John Doe"}})
     query_string = Node.to_query_string(mynode)
 
-    assert query_string == "(john:person{name:\"John Doe\"})"
+    assert query_string == "(john:person{name:'John Doe'})"
   end
 
   test "compares two Nodes correctly" do
     # different ids
-    mynode = Node.new(%{id: "a", alias: "john", label: "person", properties: %{name: "John Doe"}})
+    mynode = Node.new(%{id: 1, alias: "john", label: "person", properties: %{name: "John Doe"}})
 
     othernode =
-      Node.new(%{id: "b", alias: "john", label: "person", properties: %{name: "John Doe"}})
+      Node.new(%{id: 2, alias: "john", label: "person", properties: %{name: "John Doe"}})
 
-    assert mynode != othernode
+    assert not Node.compare(mynode, othernode)
 
     # different labels
     mynode = Node.new(%{label: "person", properties: %{name: "John Doe"}})
     othernode = Node.new(%{label: "human", properties: %{name: "John Doe"}})
 
-    assert mynode != othernode
+    assert not Node.compare(mynode, othernode)
 
     # different properties sizes
     mynode = Node.new(%{label: "person", properties: %{name: "John Doe"}})
     othernode = Node.new(%{label: "person", properties: %{name: "John Doe", age: 25}})
 
-    assert mynode != othernode
+    assert not Node.compare(mynode, othernode)
 
     # different properties
     mynode = Node.new(%{label: "person", properties: %{name: "John Doe"}})
     othernode = Node.new(%{label: "person", properties: %{name: "Jane Doe"}})
 
-    assert mynode != othernode
+    assert not Node.compare(mynode, othernode)
 
     # same constructed node
     mynode = Node.new(%{label: "person", properties: %{name: "John Doe"}})
     othernode = Node.new(%{label: "person", properties: %{name: "John Doe"}})
 
-    assert mynode == othernode
+    assert Node.compare(mynode, othernode)
   end
 end

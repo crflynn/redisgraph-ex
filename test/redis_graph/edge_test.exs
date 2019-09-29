@@ -30,7 +30,7 @@ defmodule RedisGraph.EdgeTest do
       })
 
     props = Edge.properties_to_string(myedge)
-    assert props == "{purpose:\"pleasure\"}"
+    assert props == "{purpose:'pleasure'}"
   end
 
   test "gets the query string for the edge" do
@@ -45,7 +45,39 @@ defmodule RedisGraph.EdgeTest do
       })
 
     query_string = Edge.to_query_string(myedge)
-    assert query_string == "(p)-[{purpose:\"pleasure\"}]->(j)"
+    assert query_string == "(p)-[{purpose:'pleasure'}]->(j)"
+
+    myedge =
+      Edge.new(%{
+        src_node: src_node,
+        dest_node: dest_node,
+        relation: "",
+        properties: %{purpose: "pleasure"}
+      })
+
+    query_string = Edge.to_query_string(myedge)
+    assert query_string == "(p)-[{purpose:'pleasure'}]->(j)"
+
+    myedge =
+      Edge.new(%{
+        src_node: src_node,
+        dest_node: dest_node,
+        relation: "vacation",
+        properties: %{purpose: "pleasure"}
+      })
+
+    query_string = Edge.to_query_string(myedge)
+    assert query_string == "(p)-[:vacation{purpose:'pleasure'}]->(j)"
+
+    myedge =
+      Edge.new(%{
+        src_node: src_node,
+        dest_node: dest_node,
+        relation: "vacation"
+      })
+
+    query_string = Edge.to_query_string(myedge)
+    assert query_string == "(p)-[:vacation]->(j)"
   end
 
   test "compares two edges correctly" do
@@ -69,7 +101,7 @@ defmodule RedisGraph.EdgeTest do
         properties: %{purpose: "pleasure"}
       })
 
-    assert myedge != otheredge
+    assert not Edge.compare(myedge, otheredge)
 
     # different source nodes
     other_node = Node.new(%{label: "food", properties: %{name: "Apple"}})
@@ -88,7 +120,7 @@ defmodule RedisGraph.EdgeTest do
         properties: %{purpose: "pleasure"}
       })
 
-    assert myedge != otheredge
+    assert not Edge.compare(myedge, otheredge)
 
     # different destination nodes
     myedge =
@@ -105,7 +137,7 @@ defmodule RedisGraph.EdgeTest do
         properties: %{purpose: "pleasure"}
       })
 
-    assert myedge != otheredge
+    assert not Edge.compare(myedge, otheredge)
 
     # different relations
     myedge =
@@ -124,7 +156,7 @@ defmodule RedisGraph.EdgeTest do
         properties: %{purpose: "pleasure"}
       })
 
-    assert myedge != otheredge
+    assert not Edge.compare(myedge, otheredge)
 
     # different properties sizes
     myedge =
@@ -141,7 +173,7 @@ defmodule RedisGraph.EdgeTest do
         properties: %{purpose: "pleasure", enjoyable: "very"}
       })
 
-    assert myedge != otheredge
+    assert not Edge.compare(myedge, otheredge)
 
     # different properties
     myedge =
@@ -158,7 +190,7 @@ defmodule RedisGraph.EdgeTest do
         properties: %{purpose: "business"}
       })
 
-    assert myedge != otheredge
+    assert not Edge.compare(myedge, otheredge)
 
     # same edges
     myedge =
@@ -175,6 +207,6 @@ defmodule RedisGraph.EdgeTest do
         properties: %{purpose: "pleasure"}
       })
 
-    assert myedge == otheredge
+    assert Edge.compare(myedge, otheredge)
   end
 end

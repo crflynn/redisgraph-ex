@@ -17,9 +17,9 @@ defmodule RedisGraph.UtilTest do
   test "surrounds a string with quotes" do
     test_string = "this is a string"
     quoted_string = Util.quote_string(test_string)
-    assert quoted_string == "\"" <> test_string <> "\""
+    assert quoted_string == "'" <> test_string <> "'"
 
-    already_quoted = "\"quoted string\""
+    already_quoted = "'quoted string'"
     quoted_string = Util.quote_string(already_quoted)
     assert quoted_string == already_quoted
 

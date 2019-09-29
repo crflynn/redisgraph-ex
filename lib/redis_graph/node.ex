@@ -93,9 +93,11 @@ defmodule RedisGraph.Node do
   * if properties differ then returns false
   * otherwise returns true
   """
-  @spec t() == t() :: boolean()
-  def left == right do
+  @spec compare(t(), t()) :: boolean()
+  def compare(left, right) do
     cond do
+      left.id != right.id -> false
+      left.alias != right.alias -> false
       left.label != right.label -> false
       map_size(left.properties) != map_size(right.properties) -> false
       not Map.equal?(left.properties, right.properties) -> false
