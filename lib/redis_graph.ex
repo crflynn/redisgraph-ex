@@ -1,6 +1,6 @@
 defmodule RedisGraph do
   @moduledoc """
-  Provides the components to construct and easily interact with Graph
+  Provides the components to construct and interact with Graph
   entities in a RedisGraph database.
 
   This library uses [Redix](https://github.com/whatyouhide/redix) to
@@ -108,6 +108,7 @@ defmodule RedisGraph do
   alias RedisGraph.Graph
   alias RedisGraph.Node
   alias RedisGraph.QueryResult
+  alias RedisGraph.Util
 
   require Logger
 
@@ -144,7 +145,7 @@ defmodule RedisGraph do
 
     case Redix.command(conn, c) do
       {:ok, result} ->
-        {:ok, QueryResult.new(%{raw_result_set: result})}
+        {:ok, QueryResult.new(%{conn: conn, graph_name: Enum.at(c, 1), raw_result_set: result})}
 
       {:error, _reason} = error ->
         error
@@ -204,7 +205,7 @@ defmodule RedisGraph do
         |> Enum.map(&Edge.to_query_string/1)
         |> Enum.join(",")
 
-      query_string = "MERGE " <> nodes_string <> "," <> edges_string
+      query_string = "CREATE " <> nodes_string <> "," <> edges_string
 
       query_string =
         if String.at(query_string, -1) == "," do
@@ -240,34 +241,42 @@ defmodule RedisGraph do
     RedisGraph.query(conn, name, "MERGE " <> pattern)
   end
 
-  # def call_procedure(conn, name, procedure, args \\ [], kwargs \\ %{}) do
-  #   args =
-  #     args
-  #     |> Enum.map(&Util.quote_string/1)
-  #     |> Enum.join(",")
+  def call_procedure(conn, name, procedure, args \\ [], kwargs \\ %{}) do
+    args =
+      args
+      |> Enum.map(&Util.quote_string/1)
+      |> Enum.join(",")
 
-  #   yields = Map.get(kwargs, "y", [])
+    yields = Map.get(kwargs, "y", [])
 
-  #   yields =
-  #   if length(yields) > 0 do
-  #     " YIELD " <> Enum.join(yields, ",")
-  #   else
-  #     ""
-  #   end
+    yields =
+      if length(yields) > 0 do
+        " YIELD " <> Enum.join(yields, ",")
+      else
+        ""
+      end
 
-  #   q = "CALL " <> procedure <> "(" <> args <> ")" <> yields
-  #   query(conn, name, q)
-  # end
+    q = "CALL " <> procedure <> "(" <> args <> ")" <> yields
+    c = ["GRAPH.QUERY", name, q, "--compact"]
 
-  # def labels(conn, name) do
-  #   call_procedure(conn, name, "db.labels")
-  # end
+    case Redix.command(conn, c) do
+      {:ok, result} ->
+        {:ok, result}
 
-  # def relationship_types(conn, name) do
-  #   call_procedure(conn, name, "db.relationshipTypes")
-  # end
+      {:error, _reason} = error ->
+        error
+    end
+  end
 
-  # def property_keys(conn, name) do
-  #   call_procedure(conn, name, "db.propertyKeys")
-  # end
+  def labels(conn, name) do
+    call_procedure(conn, name, "db.labels")
+  end
+
+  def relationship_types(conn, name) do
+    call_procedure(conn, name, "db.relationshipTypes")
+  end
+
+  def property_keys(conn, name) do
+    call_procedure(conn, name, "db.propertyKeys")
+  end
 end

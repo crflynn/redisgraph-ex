@@ -15,14 +15,15 @@ defmodule RedisGraph.Edge do
   alias RedisGraph.Util
 
   @type t() :: %__MODULE__{
-          src_node: Node.t(),
-          dest_node: Node.t(),
+          id: integer(),
+          src_node: Node.t() | number(),
+          dest_node: Node.t() | number(),
           relation: String.t(),
           properties: %{optional(String.t()) => any()}
         }
 
   @enforce_keys [:src_node, :dest_node, :relation]
-  defstruct [:src_node, :dest_node, :relation, properties: %{}]
+  defstruct [:id, :src_node, :dest_node, :relation, properties: %{}]
 
   @doc """
   Create a new Edge from a map.

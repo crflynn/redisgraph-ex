@@ -15,12 +15,13 @@ defmodule RedisGraph.Node do
   alias RedisGraph.Util
 
   @type t() :: %__MODULE__{
+          id: integer(),
           alias: String.t(),
           label: String.t(),
           properties: %{optional(String.t()) => any()}
         }
 
-  defstruct [:alias, :label, properties: %{}]
+  defstruct [:id, :alias, :label, properties: %{}]
 
   @doc """
   Creates a new Node.

@@ -28,8 +28,8 @@ defmodule RedisGraph.Util do
   end
 
   defp quote_if_not(v, pos) do
-    if String.at(v, pos) != "\"" do
-      "\""
+    if String.at(v, pos) != "\'" do
+      "\'"
     else
       ""
     end
