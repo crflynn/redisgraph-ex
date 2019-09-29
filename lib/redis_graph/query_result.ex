@@ -36,8 +36,10 @@ defmodule RedisGraph.QueryResult do
   @relationships_created "Relationships created"
   @query_internal_execution_time "Query internal execution time"
 
+  @graph_removed_internal_execution_time "Graph removed, internal execution time"
+
   @type t() :: %__MODULE__{
-          raw_result_set: list(any()),
+          raw_result_set: list(any()) | String.t(),
           header: list(String.t()),
           result_set: list(list(any())),
           statistics: %{String.t() => String.t()}
@@ -68,14 +70,23 @@ defmodule RedisGraph.QueryResult do
   def new(map) do
     s = struct(__MODULE__, map)
 
-    if length(s.raw_result_set) == 1 do
-      %{s | statistics: parse_statistics(Enum.at(s.raw_result_set, 0))}
+    process_raw_result(s)
+  end
+
+  defp process_raw_result(%{raw_result_set: result} = query_result) when is_list(result) do
+    if length(result) == 1 do
+      %{query_result | statistics: parse_statistics(Enum.at(result, 0))}
     else
       %{
-        parse_results(s)
-        | statistics: parse_statistics(Enum.at(s.raw_result_set, -1))
+        parse_results(query_result)
+        | statistics: parse_statistics(Enum.at(result, -1))
       }
     end
+  end
+
+  # process the result of a delete query
+  defp process_raw_result(%{raw_result_set: result} = query_result) when is_binary(result) do
+    %{query_result | statistics: parse_statistics(result)}
   end
 
   @doc "Return a boolean indicating emptiness of a QueryResult."
@@ -88,7 +99,7 @@ defmodule RedisGraph.QueryResult do
     end
   end
 
-  defp parse_statistics(raw_statistics) do
+  defp parse_statistics(raw_statistics) when is_list(raw_statistics) do
     stats = [
       @labels_added,
       @nodes_created,
@@ -102,6 +113,20 @@ defmodule RedisGraph.QueryResult do
     stats
     |> Enum.map(fn s -> {s, get_value(s, raw_statistics)} end)
     |> Enum.into(%{})
+  end
+
+  # delete query result
+  defp parse_statistics(raw_statistics) when is_binary(raw_statistics) do
+    %{
+      @labels_added => nil,
+      @nodes_created => nil,
+      @properties_set => nil,
+      @relationships_created => nil,
+      @nodes_deleted => nil,
+      @relationships_deleted => nil,
+      @query_internal_execution_time =>
+        extract_value(@graph_removed_internal_execution_time, raw_statistics)
+    }
   end
 
   defp get_value(stat, [raw_statistic | raw_statistics]) do
@@ -148,8 +173,6 @@ defmodule RedisGraph.QueryResult do
     # TODO how to bubble this up better
     case response do
       {:ok, result} ->
-        IO.inspect(result)
-
         result
         # records
         |> Enum.at(1)
