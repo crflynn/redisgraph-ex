@@ -1,164 +1,121 @@
 defmodule RedisGraph.Graph do
-  alias RedisGraph.Node
-  alias RedisGraph.Edge
-  alias RedisGraph.Util
-  alias RedisGraph.QueryResult
+  @moduledoc """
+  A Graph consisting of `RedisGraph.Nodes` and `RedisGraph.Edges`.
 
-  @enforce_keys [:conn]
+  A name is required for each graph.
+
+  Construct graphs by adding `RedisGraph.Nodes` followed
+  by `RedisGraph.Edges` which relate existing nodes.
+
+  If a node does not have an alias, a random alias will
+  be created for it upon adding.
+
+  Edges cannot be added unless both the source node and
+  destination node aliases already exist in the graph.
+  """
+  alias RedisGraph.Edge
+  alias RedisGraph.Node
+
+  @type t() :: %__MODULE__{
+          name: String.t(),
+          nodes: %{optional(String.t()) => Node.t()},
+          edges: list(Edge.t())
+        }
+
+  @enforce_keys [:name]
   defstruct [
     :name,
-    :conn,
     nodes: %{},
-    edges: [],
-    labels: [],
-    relationship_types: [],
-    properties: []
+    edges: []
   ]
 
+  @doc """
+  Create a graph from a map.
+
+  ## Example
+  ```
+  alias RedisGraph.{Node, Edge, Graph, QueryResult}
+
+  # Create a graph
+  graph = Graph.new(%{
+    name: "social"
+  })
+
+  # Create a node
+  john = Node.new(%{
+    label: "person",
+    properties: %{
+      name: "John Doe",
+      age: 33,
+      gender: "male",
+      status: "single"
+    }
+  })
+
+  # Add the node to the graph
+  # The graph and node are returned
+  # The node may be modified if no alias has been set
+  # For this reason, nodes should always be added to the graph
+  # before creating edges between them.
+  {graph, john} = Graph.add_node(graph, john)
+
+  # Create a second node
+  japan = Node.new(%{
+    label: "country",
+    properties: %{
+      name: "Japan"
+    }
+  })
+
+  # Add the second node
+  {graph, japan} = Graph.add_node(graph, japan)
+
+  # Create an edge connecting the two nodes
+  edge = Edge.new(%{
+    src_node: john,
+    dest_node: japan,
+    relation: "visited"
+  })
+
+  # Add the edge to the graph
+  # If the nodes are not present, an {:error, error} is returned
+  {:ok, graph} = Graph.add_edge(graph, edge)
+  ```
+  """
+  @spec new(map()) :: t()
   def new(map) do
     struct(__MODULE__, map)
   end
 
-  def get_label(graph, idx) do
-    graph = %{
-      graph
-      | labels:
-          labels(graph)
-          |> Enum.at(0)
-    }
+  @doc """
+  Add a `RedisGraph.Node` to a graph.
 
-    Enum.at(graph.labels, idx)
-  end
-
-  def get_relation(graph, idx) do
-    graph = %{
-      graph
-      | relationship_types:
-          relationship_types(graph)
-          |> Enum.at(0)
-    }
-
-    Enum.at(graph.relationship_types, idx)
-  end
-
-  def get_property(graph, idx) do
-    graph = %{
-      graph
-      | properties:
-          property_keys(graph)
-          |> Enum.at(0)
-    }
-
-    Enum.at(graph.properties, idx)
-  end
-
+  Creates a random string alias for the Node
+  if the Node has no alias.
+  """
+  @spec add_node(t(), Node.t()) :: {t(), Node.t()}
   def add_node(graph, node) do
     node = Node.set_alias_if_nil(node)
     {%{graph | nodes: Map.put(graph.nodes, node.alias, node)}, node}
   end
 
+  @doc """
+  Add a `RedisGraph.Edge` to a graph.
+
+  If the source node or destination node are not part of the
+  graph, then the edge cannot be added. Uses node aliases
+  to check graph membership.
+  """
+  @spec add_edge(t(), Edge.t()) :: {:ok, t()} | {:error, any()}
   def add_edge(graph, edge) do
     cond do
-      !node_in_graph?(graph, edge.src_node) -> {:error, "source node not in graph"}
-      !node_in_graph?(graph, edge.dest_node) -> {:error, "destination node not in graph"}
+      not node_in_graph?(graph, edge.src_node) -> {:error, "source node not in graph"}
+      not node_in_graph?(graph, edge.dest_node) -> {:error, "destination node not in graph"}
       true -> {:ok, %{graph | edges: graph.edges ++ [edge]}}
     end
   end
 
   defp node_in_graph?(graph, node) do
     Map.has_key?(graph.nodes, node.alias)
-  end
-
-  def commit(graph) do
-    if length(graph.edges) == 0 && map_size(graph.nodes) == 0 do
-      {:error, "graph is empty"}
-    else
-      nodes_string =
-        graph.nodes
-        |> Enum.map(fn {_label, node} -> Node.to_query_string(node) end)
-        |> Enum.join(",")
-
-      edges_string =
-        graph.edges
-        |> Enum.map(&Edge.to_query_string/1)
-        |> Enum.join(",")
-
-      query_string = "CREATE " <> nodes_string <> "," <> edges_string
-
-      query_string =
-        if String.at(query_string, -1) == "," do
-          String.slice(query_string, 0..-2)
-        else
-          query_string
-        end
-      IO.inspect(query_string)
-      {:ok, query(graph, query_string)}
-    end
-  end
-
-  def flush(graph) do
-    case commit(graph) do
-      {:error, "graph is empty"} ->
-        {:error, "graph is empty"}
-
-      {:ok, _result} ->
-        {:ok, %{graph | nodes: %{}, edges: []}}
-    end
-  end
-
-  def query(graph, q) do
-    case Redix.command(graph.conn, ["GRAPH.QUERY", graph.name, q, "--compact"]) do
-      {:ok, result} -> QueryResult.new(%{graph: graph, raw_result_set: result})
-      {:error, result} -> result
-    end
-  end
-
-  defp execution_plan_to_string(plan) do
-    plan
-    |> Enum.join("\n")
-  end
-
-  def execution_plan(graph, q) do
-    Redix.command(graph.conn, ["GRAPH.EXPLAIN", graph.name, q])
-    |> execution_plan_to_string
-  end
-
-  def delete(graph) do
-    Redix.command(graph.conn, ["GRAPH.DELETE", graph.name])
-  end
-
-  def merge(graph, pattern) do
-    query(graph, "MERGE " <> pattern)
-  end
-
-  def call_procedure(graph, procedure, args \\ [], kwargs \\ {}) do
-    args =
-      args
-      |> Enum.map(&Util.quote_string/1)
-      |> Enum.join(",")
-
-    yields = Map.get(kwargs, "y", [])
-
-    yields =
-      if length(yields) > 0 do
-        " YIELD " <> Enum.join(yields, ",")
-      else
-        ""
-      end
-
-    q = "CALL " <> procedure <> "(" <> args <> ")" <> yields
-    query(graph, q)
-  end
-
-  def labels(graph) do
-    call_procedure(graph, "db.labels").result_set
-  end
-
-  def relationship_types(graph) do
-    call_procedure(graph, "db.relationshipTypes").result_set
-  end
-
-  def property_keys(graph) do
-    call_procedure(graph, "db.propertyKeys").result_set
   end
 end

@@ -7,7 +7,15 @@ defmodule RedisGraph.MixProject do
       version: "0.1.0",
       elixir: "~> 1.9",
       start_permanent: Mix.env() == :prod,
+      test_coverage: [tool: ExCoveralls],
+      aliases: aliases(),
       deps: deps()
+    ]
+  end
+
+  defp aliases do
+    [
+      docs: ["docs", "cmd open doc/index.html"]
     ]
   end
 
@@ -21,7 +29,15 @@ defmodule RedisGraph.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:redix, ">= 0.10.2"}
+      {:redix, ">= 0.10.2"},
+      {:scribe, "~> 0.10"},
+
+      # dev
+      {:ex_doc, "~> 0.21", only: :dev, runtime: false},
+      {:dialyxir, "~> 0.5", only: :dev, runtime: false},
+
+      # test
+      {:excoveralls, "~> 0.10", only: :test}
     ]
   end
 end
