@@ -17,7 +17,7 @@ defmodule RedisGraph.QueryResultTest do
 
     # Execute the query
     {:ok, query_result} = RedisGraph.query(conn, sample_graph.name, query)
-  
+
     # Pretty print the results using the Scribe lib
     assert String.contains?(QueryResult.pretty_print(query_result), "c.name")
 

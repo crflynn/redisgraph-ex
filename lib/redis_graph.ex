@@ -241,7 +241,8 @@ defmodule RedisGraph do
     RedisGraph.query(conn, name, "MERGE " <> pattern)
   end
 
-  @spec call_procedure(connection(), String.t(), String.t(), list(), map()) :: {:ok, list()} | {:error, any()}
+  @spec call_procedure(connection(), String.t(), String.t(), list(), map()) ::
+          {:ok, list()} | {:error, any()}
   def call_procedure(conn, name, procedure, args \\ [], kwargs \\ %{}) do
     args =
       args

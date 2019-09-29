@@ -16,8 +16,6 @@ defmodule RedisGraph.Graph do
   alias RedisGraph.Edge
   alias RedisGraph.Node
 
-  require Logger
-
   @type t() :: %__MODULE__{
           name: String.t(),
           nodes: %{optional(String.t()) => Node.t()},
