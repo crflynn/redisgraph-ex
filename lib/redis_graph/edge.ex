@@ -78,6 +78,7 @@ defmodule RedisGraph.Edge do
 
   Comparison logic:
 
+  * If the ids differ, returns ``false``
   * If the source nodes differ, returns ``false``
   * If the destination nodes differ, returns ``false``
   * If the relations differ, returns ``false``

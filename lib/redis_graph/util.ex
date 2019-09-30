@@ -1,5 +1,5 @@
 defmodule RedisGraph.Util do
-  @moduledoc "Provide utility functions for RedisGraph modules."
+  @moduledoc "Provides utility functions for RedisGraph modules."
 
   @doc """
   Generate a random string of characters `a-z` of length `n`.

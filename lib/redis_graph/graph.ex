@@ -8,7 +8,7 @@ defmodule RedisGraph.Graph do
   by `RedisGraph.Edges` which relate existing nodes.
 
   If a node does not have an alias, a random alias will
-  be created for it upon adding.
+  be created for it prior to adding to a `RedisGraph.Graph`.
 
   Edges cannot be added unless both the source node and
   destination node aliases already exist in the graph.

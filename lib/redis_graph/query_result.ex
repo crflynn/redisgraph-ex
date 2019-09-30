@@ -2,6 +2,15 @@ defmodule RedisGraph.QueryResult do
   @moduledoc """
   A QueryResult containing returned fields and query metadata.
 
+  The resulting struct contains the result set header and records,
+  statistics about the query executed, and referential lists of entity
+  identifiers, specifically labels, property keys, and relationship types.
+
+  The labels refer to the `label` attribute of either Node entities
+  in the graph, The property keys are the keys found in any Node or Edge
+  property maps. The relationship types are the `relation` attributes of
+  Edge entities in the graph.
+
   ## Example
 
   ```elixir
@@ -11,6 +20,9 @@ defmodule RedisGraph.QueryResult do
   # Execute the query
   {:ok, query_result} = RedisGraph.query(conn, graph.name, query)
 
+  # Show the resulting statistics
+  IO.inspect(query_result.statistics)
+
   # Pretty print the results using the Scribe lib
   IO.puts(QueryResult.pretty_print(query_result))
   ```
@@ -18,6 +30,18 @@ defmodule RedisGraph.QueryResult do
   which gives the following results:
 
   ```elixir
+  # Query result statistics
+  %{
+    "Labels added" => nil,
+    "Nodes created" => nil,
+    "Nodes deleted" => nil,
+    "Properties set" => nil,
+    "Query internal execution time" => "0.228669",
+    "Relationships created" => nil,
+    "Relationships deleted" => nil
+  }
+  
+  # Pretty printed output
   +----------------+-------------+-----------------+--------------+
   | "p.name"       | "p.age"     | "v.purpose"     | "c.name"     |
   +----------------+-------------+-----------------+--------------+
@@ -61,10 +85,12 @@ defmodule RedisGraph.QueryResult do
   @doc """
   Create a new QueryResult from a map.
 
-  Pass a map with a field `:raw_result_set` which
-  contains the result of a GRAPH.QUERY run against
-  a database using `Redix.command/2` or
-  `RedisGraph.command/2`
+  Pass a map with a connection, graph name, and raw redisgraph result.
+  The raw result is the output of the function `Redix.command/2`.
+  This function is invoked by the `RedisGraph.command/2` function.
+
+  The functions `RedisGraph.commit/2`, `RedisGraph.query/3`, `RedisGraph.delete/2`,
+  and `RedisGraph.merge/3` will also return a new `RedisGraph.QueryResult`.
   """
   @spec new(map()) :: t()
   def new(map) do
@@ -281,7 +307,7 @@ defmodule RedisGraph.QueryResult do
     end)
   end
 
-  @doc "Pretty print a QueryResult to a table using `Scribe`."
+  @doc "Pretty print a QueryResult to a tabular string using `Scribe`."
   @spec pretty_print(t()) :: String.t()
   def pretty_print(%{header: header, result_set: records} = query_result) do
     if is_nil(header) or is_nil(records) do
