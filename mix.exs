@@ -1,15 +1,24 @@
 defmodule RedisGraph.MixProject do
   use Mix.Project
 
+  @description "A RedisGraph client implementation."
+  @repo_url "https://github.com/crflynn/redisgraph-ex"
+  @version "0.1.0"
+
   def project do
     [
       app: :redisgraph,
-      version: "0.1.0",
+      version: @version,
       elixir: "~> 1.9",
       start_permanent: Mix.env() == :prod,
       test_coverage: [tool: ExCoveralls],
       aliases: aliases(),
-      deps: deps()
+      deps: deps(),
+      # hex
+      description: @description,
+      package: package(),
+      source_url: @repo_url,
+      homepage_url: @repo_url
     ]
   end
 
@@ -23,6 +32,14 @@ defmodule RedisGraph.MixProject do
   def application do
     [
       extra_applications: [:logger]
+    ]
+  end
+
+  defp package() do
+    [
+      maintainers: ["Christopher Flynn"],
+      licenses: ["MIT"],
+      links: %{"GitHub" => @repo_url}
     ]
   end
 
