@@ -4,7 +4,7 @@ A [RedisGraph](https://oss.redislabs.com/redisgraph/) client implementation libr
 
 ## Installation
 
-If [available in Hex](https://hex.pm/docs/publish), the package can be installed
+The `redisgraph` package can be installed
 by adding `redisgraph` to your list of dependencies in `mix.exs`:
 
 ```elixir
@@ -15,9 +15,7 @@ def deps do
 end
 ```
 
-Documentation can be generated with [ExDoc](https://github.com/elixir-lang/ex_doc)
-and published on [HexDocs](https://hexdocs.pm). Once published, the docs can
-be found at [https://hexdocs.pm/redisgraph](https://hexdocs.pm/redisgraph).
+Documentation can be found at [https://hexdocs.pm/redisgraph](https://hexdocs.pm/redisgraph).
 
 ## Example usage
 
@@ -119,3 +117,7 @@ which gives the following results:
 | "John Doe"     | 33          | nil             | "Japan"      |
 +----------------+-------------+-----------------+--------------+
 ```
+
+## License
+
+RedisGraph is licensed under [MIT](https://github.com/crflynn/redisgraph-ex/blob/master/LICENSE.txt).

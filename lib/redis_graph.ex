@@ -134,7 +134,7 @@ defmodule RedisGraph do
       [
         "GRAPH.QUERY",
         "imdb",
-        "(a:actor)-[:act]->(m:movie {title:'straight outta compton'})",
+        "MATCH (a:actor)-[:act]->(m:movie {title:'straight outta compton'})",
         "--compact"
       ]
   """
@@ -190,12 +190,12 @@ defmodule RedisGraph do
   end
 
   @doc """
-  Commit a `RedisGraph.Graph` graph to the database using ``CREATE``.
+  Commit a `RedisGraph.Graph` to the database using ``CREATE``.
 
   Returns a `RedisGraph.QueryResult` which contains query
   statistics related to entities created.
 
-  https://oss.redislabs.com/redisgraph/commands/#merge
+  https://oss.redislabs.com/redisgraph/commands/#create
   """
   @spec commit(connection(), Graph.t()) ::
           {:ok, QueryResult.t()} | {:error, any()}

@@ -83,7 +83,7 @@ defmodule RedisGraph.Edge do
   * If the destination nodes differ, returns ``false``
   * If the relations differ, returns ``false``
   * If the properties differ, returns ``false``
-  * Otherwise returns true
+  * Otherwise returns `true`
   """
   @spec compare(t(), t()) :: boolean()
   def compare(left, right) do

@@ -40,7 +40,7 @@ defmodule RedisGraph.QueryResult do
     "Relationships created" => nil,
     "Relationships deleted" => nil
   }
-  
+
   # Pretty printed output
   +----------------+-------------+-----------------+--------------+
   | "p.name"       | "p.age"     | "v.purpose"     | "c.name"     |
