@@ -1,5 +1,7 @@
 # RedisGraph
 
+[![Hex.pm](https://img.shields.io/hexpm/v/redisgraph)](https://hex.pm/packages/redisgraph)
+
 A [RedisGraph](https://oss.redislabs.com/redisgraph/) client implementation library in Elixir.
 
 ## Installation

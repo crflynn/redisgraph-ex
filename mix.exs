@@ -25,7 +25,7 @@ defmodule RedisGraph.MixProject do
 
   defp aliases do
     [
-      docs: ["docs", "cmd open doc/index.html"]
+      docopen: ["docs", "cmd open doc/index.html"]
     ]
   end
 
@@ -46,7 +46,7 @@ defmodule RedisGraph.MixProject do
 
   defp docs do
     [
-      main: "README",
+      main: "readme",
       source_ref: "v#{@version}",
       source_url: @repo_url,
       extras: [
