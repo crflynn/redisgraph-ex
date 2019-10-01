@@ -18,7 +18,8 @@ defmodule RedisGraph.MixProject do
       description: @description,
       package: package(),
       source_url: @repo_url,
-      homepage_url: @repo_url
+      homepage_url: @repo_url,
+      docs: docs()
     ]
   end
 
@@ -35,11 +36,23 @@ defmodule RedisGraph.MixProject do
     ]
   end
 
-  defp package() do
+  defp package do
     [
       maintainers: ["Christopher Flynn"],
       licenses: ["MIT"],
       links: %{"GitHub" => @repo_url}
+    ]
+  end
+
+  defp docs do
+    [
+      main: "README",
+      source_ref: "v#{@version}",
+      source_url: @repo_url,
+      extras: [
+        "README.md",
+        "CHANGELOG.md"
+      ]
     ]
   end
 

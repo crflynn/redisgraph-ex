@@ -120,21 +120,21 @@ defmodule RedisGraph do
   https://oss.redislabs.com/redisgraph/commands/
 
   Query commands will be a list of strings. They
-  will begin with either GRAPH.QUERY,
-  GRAPH.EXPLAIN, or GRAPH.DELETE.
+  will begin with either ``GRAPH.QUERY``,
+  ``GRAPH.EXPLAIN``, or ``GRAPH.DELETE``.
 
   The next element will be the name of the graph.
 
   The third element will be the query command.
 
-  Optionally pass the last element `--compact`
+  Optionally pass the last element ``--compact``
   for compact results.
 
   ## Example:
       [
         "GRAPH.QUERY",
         "imdb",
-        "(a:actor)-[:act]->(m:movie {title:'straight outta compton'})",
+        "MATCH (a:actor)-[:act]->(m:movie {title:'straight outta compton'})",
         "--compact"
       ]
   """
@@ -155,6 +155,9 @@ defmodule RedisGraph do
   @doc """
   Query on a graph in the database.
 
+  Returns a `RedisGraph.QueryResult` containing the result set
+  and metadata associated with the query.
+
   https://oss.redislabs.com/redisgraph/commands/#graphquery
   """
   @spec query(connection(), String.t(), String.t()) ::
@@ -166,6 +169,8 @@ defmodule RedisGraph do
 
   @doc """
   Fetch the execution plan for a query on a graph.
+
+  Returns a raw result containing the query plan.
 
   https://oss.redislabs.com/redisgraph/commands/#graphexplain
   """
@@ -185,9 +190,12 @@ defmodule RedisGraph do
   end
 
   @doc """
-  Commit a graph to the database using MERGE.
+  Commit a `RedisGraph.Graph` to the database using ``CREATE``.
 
-  https://oss.redislabs.com/redisgraph/commands/#merge
+  Returns a `RedisGraph.QueryResult` which contains query
+  statistics related to entities created.
+
+  https://oss.redislabs.com/redisgraph/commands/#create
   """
   @spec commit(connection(), Graph.t()) ::
           {:ok, QueryResult.t()} | {:error, any()}
@@ -221,6 +229,9 @@ defmodule RedisGraph do
   @doc """
   Delete a graph from the database.
 
+  Returns a `RedisGraph.QueryResult` with statistic for
+  query execution time.
+
   https://oss.redislabs.com/redisgraph/commands/#delete
   """
   @spec delete(connection(), String.t()) ::
@@ -233,6 +244,12 @@ defmodule RedisGraph do
   @doc """
   Merge a pattern into the graph.
 
+  Creates or updates the graph pattern into the graph specified
+  using the ``MERGE`` command.
+
+  Returns a `RedisGraph.QueryResult` with statistics for
+  entities created.
+
   https://oss.redislabs.com/redisgraph/commands/#merge
   """
   @spec merge(connection(), String.t(), String.t()) ::
@@ -241,6 +258,13 @@ defmodule RedisGraph do
     RedisGraph.query(conn, name, "MERGE " <> pattern)
   end
 
+  @doc """
+  Execute a procedure call against the graph specified.
+
+  Returns the raw result of the procedure call.
+
+  https://oss.redislabs.com/redisgraph/commands/#procedures
+  """
   @spec call_procedure(connection(), String.t(), String.t(), list(), map()) ::
           {:ok, list()} | {:error, any()}
   def call_procedure(conn, name, procedure, args \\ [], kwargs \\ %{}) do
@@ -270,19 +294,19 @@ defmodule RedisGraph do
     end
   end
 
-  @doc "Fetch the response of the db.labels() procedure call."
+  @doc "Fetch the raw response of the ``db.labels()`` procedure call against the specified graph."
   @spec labels(connection(), String.t()) :: {:ok, list()} | {:error, any()}
   def labels(conn, name) do
     call_procedure(conn, name, "db.labels")
   end
 
-  @doc "Fetch the response of the db.relationshipTypes() procedure call."
+  @doc "Fetch the raw response of the ``db.relationshipTypes()`` procedure call against the specified graph."
   @spec relationship_types(connection(), String.t()) :: {:ok, list()} | {:error, any()}
   def relationship_types(conn, name) do
     call_procedure(conn, name, "db.relationshipTypes")
   end
 
-  @doc "Fetch the response of the db.propertyKeys() procedure call."
+  @doc "Fetch the raw response of the ``db.propertyKeys()`` procedure call against the specified graph."
   @spec property_keys(connection(), String.t()) :: {:ok, list()} | {:error, any()}
   def property_keys(conn, name) do
     call_procedure(conn, name, "db.propertyKeys")

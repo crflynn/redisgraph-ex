@@ -11,6 +11,14 @@ defmodule RedisGraph.Node do
 
   Nodes may optionally have properties, a map of values associated with
   the entity. These properties can be returned by database queries.
+
+  Nodes may have aliases. When adding a `RedisGraph.Node` to a
+  `RedisGraph.Graph`, a random alias may be set on the Node prior
+  to being added to the Graph if it does not already have one.
+
+  Nodes which are created as the result of a ``MATCH`` query in a
+  `RedisGraph.QueryResult` will also have numeric ids which are
+  internal to the graph in the database.
   """
   alias RedisGraph.Util
 
@@ -89,9 +97,11 @@ defmodule RedisGraph.Node do
 
   Comparison logic:
 
-  * if labels differ then returns false
-  * if properties differ then returns false
-  * otherwise returns true
+  * if ids differ then returns ``false``
+  * if aliases differ then returns ``false``
+  * if labels differ then returns ``false``
+  * if properties differ then returns ``false``
+  * otherwise returns ``true``
   """
   @spec compare(t(), t()) :: boolean()
   def compare(left, right) do

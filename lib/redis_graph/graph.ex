@@ -1,14 +1,14 @@
 defmodule RedisGraph.Graph do
   @moduledoc """
-  A Graph consisting of `RedisGraph.Nodes` and `RedisGraph.Edges`.
+  A Graph consisting of `RedisGraph.Node`s and `RedisGraph.Edge`s.
 
   A name is required for each graph.
 
-  Construct graphs by adding `RedisGraph.Nodes` followed
-  by `RedisGraph.Edges` which relate existing nodes.
+  Construct graphs by adding `RedisGraph.Node`s followed
+  by `RedisGraph.Edge`s which relate existing nodes.
 
   If a node does not have an alias, a random alias will
-  be created for it upon adding.
+  be created for it when adding to a `RedisGraph.Graph`.
 
   Edges cannot be added unless both the source node and
   destination node aliases already exist in the graph.
