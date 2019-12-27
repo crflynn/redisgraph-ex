@@ -31,6 +31,8 @@ jobs:
           mix deps.get
 
   format:
+    needs: build
+    
     runs-on: ubuntu-latest
 
     container:
@@ -43,6 +45,8 @@ jobs:
       - name: Format
         run: mix format
   test:
+    needs: build
+    
     runs-on: ubuntu-latest
     
     services:
@@ -78,6 +82,7 @@ jobs:
         run: mix test
         
   dialyzer:
+    needs: build
     runs-on: ubuntu-latest
    
     container:
