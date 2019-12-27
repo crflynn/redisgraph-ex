@@ -57,7 +57,7 @@ jobs:
       redisgraph:
         image: redislabs/redisgraph
         ports:
-          - 6379/tcp
+          - 6379:6379
     
     steps:
       - uses: actions/setup-elixir@v1.1.0
