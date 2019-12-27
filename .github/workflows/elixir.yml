@@ -7,10 +7,12 @@ jobs:
 
     runs-on: ubuntu-latest
 
-    container:
-      image: elixir:1.9.1-slim
-
     steps:
+      - uses: actions/setup-elixir@v1.1.0
+        with:
+          otp-version: 22.x
+          elixir-version: 1.9.x
+      
       - name: Checkout
         uses: actions/checkout@v1
 
@@ -39,6 +41,11 @@ jobs:
       image: elixir:1.9.1-slim
 
     steps:
+      - uses: actions/setup-elixir@v1.1.0
+        with:
+          otp-version: 22.x
+          elixir-version: 1.9.x
+
       - name: Checkout
         uses: actions/checkout@v1
 
@@ -59,6 +66,11 @@ jobs:
       image: elixir:1.9.1-slim
 
     steps:
+      - uses: actions/setup-elixir@v1.1.0
+        with:
+          otp-version: 22.x
+          elixir-version: 1.9.x
+
       - name: Checkout
         uses: actions/checkout@v1
 
@@ -84,11 +96,13 @@ jobs:
   dialyzer:
     needs: build
     runs-on: ubuntu-latest
-   
-    container:
-      image: elixir:1.9.1-slim
-
+       
     steps:
+      - uses: actions/setup-elixir@v1.1.0
+        with:
+          otp-version: 22.x
+          elixir-version: 1.9.x
+
       - name: Checkout
         uses: actions/checkout@v1
 
