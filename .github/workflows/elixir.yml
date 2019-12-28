@@ -117,5 +117,14 @@ jobs:
           mix local.hex --force
           mix deps.get
       
+      - name: Cache dialyzer plt
+        id: cache-plt
+        uses: actions/cache@v1
+        with:
+          path: _build
+          key: ${{ runner.os }}-plt-${{ hashFiles(format('{0}{1}', github.workspace, '/mix.lock')) }}
+          restore-keys: |
+            ${{ runner.os }}-plt-
+      
       - name: Run Dialyzer
         run: mix dialyzer
