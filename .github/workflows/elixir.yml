@@ -1,12 +1,9 @@
 name: Elixir CI
-
 on: pull_request
-
 jobs:
+  
   build:
-
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/setup-elixir@v1.1.0
         with:
@@ -34,9 +31,7 @@ jobs:
 
   format:
     needs: build
-    
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/setup-elixir@v1.1.0
         with:
@@ -48,17 +43,15 @@ jobs:
 
       - name: Format
         run: mix format --check-formatted
+  
   test:
     needs: build
-    
     runs-on: ubuntu-latest
-    
     services:
       redisgraph:
         image: redislabs/redisgraph
         ports:
           - 6379:6379
-    
     steps:
       - uses: actions/setup-elixir@v1.1.0
         with:
@@ -89,9 +82,7 @@ jobs:
         
   dialyzer:
     needs: build
-    
     runs-on: ubuntu-latest
-       
     steps:
       - uses: actions/setup-elixir@v1.1.0
         with:
