@@ -47,7 +47,7 @@ jobs:
         uses: actions/checkout@v1
 
       - name: Format
-        run: mix format
+        run: mix format --check-formatted
   test:
     needs: build
     
