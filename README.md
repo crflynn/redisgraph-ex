@@ -1,6 +1,7 @@
 # RedisGraph
 
 [![Hex.pm](https://img.shields.io/hexpm/v/redisgraph)](https://hex.pm/packages/redisgraph)
+[![githubactions](https://github.com/crflynn/redisgraph-ex/workflows/elixir/badge.svg)](https://github.com/crflynn/redisgraph-ex/actions)
 
 A [RedisGraph](https://oss.redislabs.com/redisgraph/) client implementation library in Elixir.
 

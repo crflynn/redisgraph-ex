@@ -24,3 +24,6 @@ redisgraph-*.tar
 
 # mac
 .DS_Store
+
+# intellij
+.idea/
