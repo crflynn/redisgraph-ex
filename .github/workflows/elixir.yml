@@ -1,5 +1,10 @@
-name: Elixir CI
-on: pull_request
+name: elixir
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+
 jobs:
   
   build:

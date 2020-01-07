@@ -2,7 +2,6 @@ defmodule RedisGraph.GraphTest do
   alias RedisGraph.Edge
   alias RedisGraph.Graph
   alias RedisGraph.Node
-  alias RedisGraph.QueryResult
 
   use ExUnit.Case
 
