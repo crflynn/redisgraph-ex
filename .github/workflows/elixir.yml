@@ -54,7 +54,7 @@ jobs:
     runs-on: ubuntu-latest
     services:
       redisgraph:
-        image: redislabs/redisgraph
+        image: redislabs/redisgraph:edge
         ports:
           - 6379:6379
     steps:
