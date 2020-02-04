@@ -13,7 +13,7 @@ jobs:
       - uses: actions/setup-elixir@v1.1.0
         with:
           otp-version: 22.x
-          elixir-version: 1.9.x
+          elixir-version: 1.10.x
       
       - name: Checkout
         uses: actions/checkout@v1
