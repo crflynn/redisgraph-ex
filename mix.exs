@@ -35,7 +35,8 @@ defmodule RedisGraph.MixProject do
       extra_applications: [:logger]
     ]
   end
-
+  #GRAPH.QUERY test MATCH (p:person)-[v:visited]->(c:country) RETURN p
+  #["GRAPH.EXPLAIN", "test", "(p:person)-[v:visited]->(c:country) RETURN p"]
   defp package do
     [
       maintainers: ["Christopher Flynn"],
@@ -59,12 +60,12 @@ defmodule RedisGraph.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:redix, ">= 0.10.2"},
-      {:scribe, "~> 0.10"},
+      {:redix, "~> 1.1"},
+    {:castore, ">= 0.0.0"},
 
       # dev
-      {:ex_doc, "~> 0.21", only: :dev, runtime: false},
-      {:dialyxir, "~> 0.5", only: :dev, runtime: false},
+      {:ex_doc, "~> 0.27", only: :dev, runtime: false},
+      {:dialyxir, "~> 1.3", only: [:dev], runtime: false},
 
       # test
       {:excoveralls, "~> 0.10", only: :test}
