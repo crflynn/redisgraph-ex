@@ -62,6 +62,29 @@ defmodule RedisGraph.QueryResult do
 
   @graph_removed_internal_execution_time "Graph removed, internal execution time"
 
+  @column_type %{
+    COLUMN_UNKNOWN: 0,
+    COLUMN_SCALAR: 1,
+    COLUMN_NODE: 2,      # Unused, retained for client compatibility.
+    COLUMN_RELATION: 3,  # Unused, retained for client compatibility.
+
+  }
+
+  @value_type %{
+    VALUE_UNKNOWN: 0,
+    VALUE_NULL: 1,
+    VALUE_STRING: 2,
+    VALUE_INTEGER: 3,
+    VALUE_BOOLEAN: 4,
+    VALUE_DOUBLE: 5,
+    VALUE_ARRAY: 6,
+    VALUE_EDGE: 7,
+    VALUE_NODE: 8,
+    VALUE_PATH: 9,
+    VALUE_MAP: 10,
+    VALUE_POINT: 11
+  }
+
   @type t() :: %__MODULE__{
           raw_result_set: list(any()) | String.t(),
           header: list(String.t()),
@@ -196,15 +219,11 @@ defmodule RedisGraph.QueryResult do
   end
 
   defp parse_procedure_call(response) do
-    # TODO how to bubble this up better
     case response do
       {:ok, result} ->
-        result
-        # records
-        |> Enum.at(1)
-        # each element is [[<int>, <str>]], extract the strings
-        |> Enum.map(fn elem -> elem |> Enum.at(0) |> Enum.at(1) end)
-
+        [_columns_array, records_array, _metadata_array] = result
+        # e.g. of records_array -- [ [[_value_type, element]], [[_value_type, element]] ]
+        Enum.with_index(records_array, fn [[_value_type, element] | _ ], index -> {index, element} end) |> Enum.into(%{})
       {:error, reason} ->
         raise reason
     end
@@ -212,11 +231,15 @@ defmodule RedisGraph.QueryResult do
 
   defp parse_results(%{raw_result_set: [header | _tail]} = query_result) do
     query_result = fetch_metadata(query_result)
-
+    # IO.puts("parse_results")
+    # IO.inspect(query_result)
     if length(header) > 0 do
+      header = parse_header(query_result)
+      # IO.puts("parse_results > header")
+      # IO.inspect(header)
       %{
         query_result
-        | header: parse_header(query_result),
+        | header: header,
           result_set: parse_records(query_result)
       }
     else
@@ -224,15 +247,43 @@ defmodule RedisGraph.QueryResult do
     end
   end
 
-  defp parse_records(%{raw_result_set: [_header | [records | _statistics]]} = query_result) do
-    Enum.map(records, &parse_row(query_result, &1))
+  defp parse_records(%{raw_result_set: [_header | [records_array | _statistics]]} = query_result) do
+    # IO.puts("parse_records")
+    # IO.puts("parse_records > query_result")
+    # IO.inspect(query_result)
+    # records = List.first(records_array)
+    # IO.puts("parse_records > records")
+    records = Enum.map(records_array, &parse_row(query_result, &1))
+    # IO.inspect(records)
   end
 
   defp parse_row(%{raw_result_set: [header | _tail]} = query_result, row) do
-    Enum.with_index(row)
-    |> Enum.map(fn {cell, idx} ->
-      parse_cell(query_result, cell, header |> Enum.at(idx) |> Enum.at(0))
-    end)
+    # IO.puts("parse_row > query_result")
+    # IO.inspect(query_result)
+    # IO.puts("parse_row > row")
+    # IO.inspect(row)
+    # IO.puts("parse_row > row > end")
+    # [[value_type | [[ id | [labels | [properties | _]]]]]] = row
+    # IO.puts("parse_row > value_type")
+    # IO.inspect(value_type)
+    # IO.puts("parse_row > id")
+    # IO.inspect(id)
+    # IO.puts("parse_row > labels")
+    # IO.inspect(labels)
+    # IO.puts("parse_row > properties")
+    # IO.inspect(properties)
+    # IO.puts("parse_row > end")
+    # Enum.with_index(row)
+    # |> IO.inspect |> Enum.map(fn {cell, idx} ->
+    #   parse_cell(query_result, cell, header |> Enum.at(idx) |> Enum.at(0))
+    # end)
+    cells = Enum.map(row, fn cell -> parse_cell(query_result, cell) end)
+    IO.puts("parse_row > cells")
+    IO.inspect(cells)
+  end
+
+  def extract_node_value(query_result, value) do
+
   end
 
   # https://oss.redislabs.com/redisgraph/client_spec/
@@ -248,22 +299,49 @@ defmodule RedisGraph.QueryResult do
     parse_edge(query_result, cell)
   end
 
-  defp parse_scalar(_query_result, cell) do
+  defp parse_cell(query_result, cell) do
+    IO.puts("parse_cell > cell")
+    IO.inspect(cell)
+    [value_type | [value]] = cell
+    res = cond do
+      value_type == @value_type[:VALUE_NODE] -> parse_node(query_result, value)
+      value_type == @value_type[:VALUE_EDGE] -> parse_edge(query_result, value)
+      value_type == @value_type[:VALUE_NULL] || value_type == @value_type[:VALUE_INTEGER] || value_type == @value_type[:VALUE_STRING] -> value
+      value_type == @value_type[:VALUE_BOOLEAN] -> if(value == "true", do: true, else: false)
+      value_type == @value_type[:VALUE_DOUBLE] -> String.to_float(value)
+      value_type == @value_type[:VALUE_ARRAY] || value_type == @value_type[:VALUE_PATH] || value_type == @value_type[:VALUE_MAP] || value_type == @value_type[:VALUE_POINT] -> "will be implemented in future"
+      true -> "unknown value type"
+    end
+    IO.puts("parse_cell > res")
+    IO.inspect(res)
+  end
+
+  defp parse_scalar(query_result, cell) do
     Enum.at(cell, 1)
+    # IO.puts("parse_row > query_result")
+    # IO.inspect(query_result)
+    # IO.puts("parse_row > cell")
+    # IO.inspect(cell)
   end
 
   defp parse_node(query_result, cell) do
-    [node_id | [label_indexes | properties]] = cell
-
+    [node_id | [label_indexes | [properties]]] = cell
+    IO.puts("parse_node > cell")
+    IO.inspect(cell)
+    # [ id | [ labels | [ properties ]]] = value
+    # labels = Enum.map(labels, fn label_id -> Map.get(all_labels, label_id) end)
+    # properties = Enum.map(properties, fn [property_id | [_valueType | [value]]] -> {:"#{Map.get(all_propertyKeys, property_id)}", value} end) |> Map.new
+    # node = %{id: id, labels: labels, properties: properties}
+    # new(node)
     Node.new(%{
       id: node_id,
-      label: get_label(query_result, label_indexes),
+      labels: parse_labels(query_result, label_indexes),
       properties: parse_entity_properties(query_result, properties)
     })
   end
 
   defp parse_edge(query_result, cell) do
-    [edge_id | [relation_index | [src_node_id | [dest_node_id | properties]]]] = cell
+    [edge_id | [relation_index | [src_node_id | [dest_node_id | [properties]]]]] = cell
 
     Edge.new(%{
       id: edge_id,
@@ -274,8 +352,8 @@ defmodule RedisGraph.QueryResult do
     })
   end
 
-  defp get_label(query_result, label_indexes) do
-    Enum.at(query_result.labels, Enum.at(label_indexes, 0))
+  defp parse_labels(query_result, label_indexes) do
+    Enum.map(label_indexes, fn label_id -> Map.get(query_result.labels, label_id) end)
   end
 
   defp get_property_key(query_result, property_key_index) do
@@ -283,16 +361,19 @@ defmodule RedisGraph.QueryResult do
   end
 
   defp get_relationship_type(query_result, relationship_type_index) do
-    Enum.at(query_result.relationship_types, relationship_type_index)
+    Map.get(query_result.relationship_types, relationship_type_index)
   end
 
   defp parse_entity_properties(query_result, properties) do
-    properties
-    |> Enum.at(0)
-    |> Enum.map(fn [property_key_index | value] ->
-      {get_property_key(query_result, property_key_index), parse_scalar(query_result, value)}
-    end)
-    |> Enum.into(%{})
+    IO.puts("parse_entity_properties")
+    IO.inspect(properties)
+    Enum.map(properties, fn [property_id | cell] -> {:"#{Map.get(query_result.property_keys, property_id)}", parse_cell(query_result, cell)} end) |> Enum.into(%{})
+    # properties
+    # |> Enum.at(0)
+    # |> Enum.map(fn [property_key_index | value] ->
+    #   {get_property_key(query_result, property_key_index), parse_scalar(query_result, value)}
+    # end)
+    # |> Enum.into(%{})
   end
 
   @doc "Transform a QueryResult into a list of maps as records."
