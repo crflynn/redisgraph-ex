@@ -23,7 +23,7 @@ defmodule RedisGraph.Edge do
         }
 
   @enforce_keys [:src_node, :dest_node, :relation]
-  defstruct [:id, :src_node, :dest_node, :relation, properties: %{}]
+  defstruct [:id, :alias, :src_node, :dest_node, :relation, properties: %{}]
 
   @doc """
   Create a new Edge from a map.
@@ -38,7 +38,16 @@ defmodule RedisGraph.Edge do
   """
   @spec new(map()) :: t()
   def new(map) do
-    struct(__MODULE__, map)
+    edge = struct(__MODULE__, map)
+    if(is_nil(edge.alias), do: set_alias_if_nil(edge), else: edge)
+  end
+
+  def set_alias_if_nil(edge) do
+    if is_nil(edge.alias) do
+      %{edge | alias: Util.random_string()}
+    else
+      edge
+    end
   end
 
   @doc "Convert an edge's properties to a query-appropriate string."
