@@ -42,16 +42,16 @@ defmodule RedisGraph.Query do
     ""
   end
 
-  def match(query) do
-    " MATCH " <> query
+  # def match(query) do
+  #   " MATCH " <> query
+  # end
+
+  def match(query, node) do is_struct(node, Node)
+    query <> " MATCH (#{node.alias}#{Util.labels_to_string(node.labels)} #{Util.properties_to_string(node.properties)}) "
   end
 
-  def node(query, node) do
-    query <> " (#{node.alias}#{Util.labels_to_string(node.labels)} #{Util.properties_to_string(node.properties)}) "
-  end
-
-  def edge(query, edge) do
-    query <> " [#{edge.alias}#{Util.type_to_string(edge.type)} #{Util.properties_to_string(edge.properties)}] "
+  def match(query, edge) do is_struct(edge, Edge)
+    query <> " MATCH [#{edge.alias}#{Util.type_to_string(edge.type)} #{Util.properties_to_string(edge.properties)}] "
   end
 
   def return(query, values) when is_list(values) do
@@ -66,8 +66,8 @@ defmodule RedisGraph.Query do
     query <> " RETURN " <> converted_values
   end
 
-  def return(query, value) when is_struct(value, Node) or is_struct(value, Edge) do
-    query <> " RETURN " <> value.alias
+  def return(query, entity) when is_struct(entity, Node) or is_struct(entity, Edge) do
+    query <> " RETURN " <> entity.alias
   end
 
   def return(query, value) when is_binary(value) do
