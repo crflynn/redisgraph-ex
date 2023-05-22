@@ -25,11 +25,11 @@ defmodule RedisGraph.Node do
   @type t() :: %__MODULE__{
           id: integer(),
           alias: String.t(),
-          label: String.t(),
+          labels: List.t(),
           properties: %{optional(String.t()) => any()}
         }
 
-  defstruct [:id, :alias, :label, properties: %{}]
+  defstruct [:id, :alias, labels: [], properties: %{}]
 
   @doc """
   Creates a new Node.
@@ -37,7 +37,7 @@ defmodule RedisGraph.Node do
   ## Example
 
       john = Node.new(%{
-        label: "person",
+        labels: ["person"],
         properties: %{
           name: "John Doe",
           age: 33
@@ -46,7 +46,8 @@ defmodule RedisGraph.Node do
   """
   @spec new(map()) :: t()
   def new(map) do
-    struct(__MODULE__, map)
+    node = struct(__MODULE__, map)
+    if(is_nil(node.alias), do: set_alias_if_nil(node), else: node)
   end
 
   @doc "Sets the node's alias if it is `nil`."
@@ -83,13 +84,13 @@ defmodule RedisGraph.Node do
         false -> node.alias
       end
 
-    label =
-      case is_nil(node.label) do
+    labels =
+      cond do
+        is_list(node.labels) and length(node.labels) > 0 -> ":" <> Enum.join(node.labels, ":")
         true -> ""
-        false -> node.label
       end
 
-    "(" <> alias_ <> ":" <> label <> properties_to_string(node) <> ")"
+    "(" <> alias_ <> labels <> properties_to_string(node) <> ")"
   end
 
   @doc """
@@ -108,7 +109,8 @@ defmodule RedisGraph.Node do
     cond do
       left.id != right.id -> false
       left.alias != right.alias -> false
-      left.label != right.label -> false
+      length(left.labels) != length(right.labels) -> false
+      not left.labels == right.labels -> false
       map_size(left.properties) != map_size(right.properties) -> false
       not Map.equal?(left.properties, right.properties) -> false
       true -> true
