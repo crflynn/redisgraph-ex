@@ -1,0 +1,942 @@
+defmodule RedisGraph.QueryTest do
+  use ExUnit.Case, async: true
+  alias RedisGraph.Query
+
+  # :create! | :match! | :optional_match! | :merge! | :delete! | :set! | :on_match_set! | :on_create_set! | :with! | :where! | :order_by! | :limit! | :skip! | :return! | :return_distinct!
+
+
+  describe "MATCH clause:" do
+    test "build query that would match on a node (with alias n) and return it through the alias." do
+      {:ok, query} =
+        Query.new()
+        |> Query.match()
+        |> Query.node(:n)
+        |> Query.return(:n)
+        |> Query.build_query()
+
+      assert query == "MATCH (n) RETURN n"
+    end
+
+    test "build query that would match on a node (with alias n, and label Person) and return it through the alias." do
+      {:ok, query} =
+        Query.new()
+        |> Query.match()
+        |> Query.node(:n, ["Person"])
+        |> Query.return(:n)
+        |> Query.build_query()
+
+      assert query == "MATCH (n:Person) RETURN n"
+    end
+
+    test "build query that would match on a node (with alias n, and labels Person and Student) and return it through the alias." do
+      {:ok, query} =
+        Query.new()
+        |> Query.match()
+        |> Query.node(:n, ["Person", "Student"])
+        |> Query.return(:n)
+        |> Query.build_query()
+
+      assert query == "MATCH (n:Person:Student) RETURN n"
+    end
+
+    test "build query that would match on a node (with alias n, and properties {age: 2, name: 'Mike'}) and return it through the alias." do
+      {:ok, query} =
+        Query.new()
+        |> Query.match()
+        |> Query.node(:n, %{age: 2, name: "Mike"})
+        |> Query.return(:n)
+        |> Query.build_query()
+
+      assert query == "MATCH (n {age: 2, name: 'Mike'}) RETURN n"
+    end
+
+    test "build query that would match on a node (with alias n, label Person and properties {age: 2, name: 'Mike'}) and return it through the alias." do
+      {:ok, query} =
+        Query.new()
+        |> Query.match()
+        |> Query.node(:n, ["Person"], %{age: 2, name: "Mike"})
+        |> Query.return(:n)
+        |> Query.build_query()
+
+      assert query == "MATCH (n:Person {age: 2, name: 'Mike'}) RETURN n"
+    end
+
+    test "build query that would match on a node (with alias n, and properties {age: 2, credit: null, has: ['dog', 11, 11.11, true, null], money: 22.22, name: 'Mike', young: true}) and return it through the alias." do
+      {:ok, query} =
+        Query.new()
+        |> Query.match()
+        |> Query.node(:n, ["Person"], %{
+          age: 2,
+          name: "Mike",
+          young: true,
+          money: 22.22,
+          credit: nil,
+          has: ["dog", 11, 11.11, true, nil]
+        })
+        |> Query.return(:n)
+        |> Query.build_query()
+
+      assert query ==
+               "MATCH (n:Person {age: 2, credit: null, has: ['dog', 11, 11.11, true, null], money: 22.22, name: 'Mike', young: true}) RETURN n"
+    end
+
+    test "build query that would match on a 2 nodes (with alias n and m) and return the node with alias n." do
+      {:ok, query} =
+        Query.new()
+        |> Query.match()
+        |> Query.node(:n)
+        |> Query.node(:m)
+        |> Query.return(:n)
+        |> Query.build_query()
+
+      assert query == "MATCH (n),(m) RETURN n"
+    end
+
+    test "build query that would match on a 2 nodes (with alias n and label Person and m and properties {age: 2, name: 'Mike'}) and return the node with alias n." do
+      {:ok, query} =
+        Query.new()
+        |> Query.match()
+        |> Query.node(:n, ["Person"])
+        |> Query.node(:m, %{age: 2, name: "Mike"})
+        |> Query.return(:n)
+        |> Query.build_query()
+
+      assert query == "MATCH (n:Person),(m {age: 2, name: 'Mike'}) RETURN n"
+    end
+
+    test "build query that would match on a 3 nodes (with alias n and label Person, alias m and properties {age: 2, name: 'Mike'} and alias b) and return the node with alias n." do
+      {:ok, query} =
+        Query.new()
+        |> Query.match()
+        |> Query.node(:n, ["Person"])
+        |> Query.node(:m, %{age: 2, name: "Mike"})
+        |> Query.node(:b)
+        |> Query.return(:n)
+        |> Query.build_query()
+
+      assert query == "MATCH (n:Person),(m {age: 2, name: 'Mike'}),(b) RETURN n"
+    end
+
+    test "build query that would match on a 2 nodes (with alias n and label Person and m and properties {age: 2, name: 'Mike'}) and return them through the aliases." do
+      {:ok, query} =
+        Query.new()
+        |> Query.match()
+        |> Query.node(:n, ["Person"])
+        |> Query.node(:m, %{age: 2, name: "Mike"})
+        |> Query.return(:n)
+        |> Query.return(:m)
+        |> Query.build_query()
+
+      assert query == "MATCH (n:Person),(m {age: 2, name: 'Mike'}) RETURN n, m"
+    end
+
+    test "build query that would match on a 3 nodes (with alias n and label Person, alias m and properties {age: 2, name: 'Mike'} and alias b) and return them through the aliases." do
+      {:ok, query} =
+        Query.new()
+        |> Query.match()
+        |> Query.node(:n, ["Person"])
+        |> Query.node(:m, %{age: 2, name: "Mike"})
+        |> Query.node(:b)
+        |> Query.return(:n)
+        |> Query.return(:m)
+        |> Query.return(:b)
+        |> Query.build_query()
+
+      assert query == "MATCH (n:Person),(m {age: 2, name: 'Mike'}),(b) RETURN n, m, b"
+    end
+
+    test "build query that would match on a node with alias n, relationship with alias r coming from the first one and going to second node with alias m and return them through the aliases." do
+      {:ok, query} =
+        Query.new()
+        |> Query.match()
+        |> Query.node(:n)
+        |> Query.relationship_from_to(:r)
+        |> Query.node(:m)
+        |> Query.return(:n)
+        |> Query.return(:r)
+        |> Query.return(:m)
+        |> Query.build_query()
+
+      assert query == "MATCH (n)-[r]->(m) RETURN n, r, m"
+    end
+
+    test "build query that would match on a node with alias n, relationship (with alias r type Friend and properties coming from the first one and going to second node with alias m and return them through the aliases." do
+      {:ok, query} =
+        Query.new()
+        |> Query.match()
+        |> Query.node(:n)
+        |> Query.relationship_from_to(:r, "Friend", %{
+          bool: true,
+          integer: 3,
+          float: 12.12,
+          str: "Hi",
+          stuff: [5, 21.21, "String", false, nil],
+          nothing: nil
+        })
+        |> Query.node(:m)
+        |> Query.return(:n)
+        |> Query.return(:r)
+        |> Query.return(:m)
+        |> Query.build_query()
+
+      assert query ==
+               "MATCH (n)-[r:Friend {bool: true, float: 12.12, integer: 3, nothing: null, str: 'Hi', stuff: [5, 21.21, 'String', false, null]}]->(m) RETURN n, r, m"
+    end
+
+    test "build query that would match on a node with alias n, relationship (with alias r type Friend coming from the first one and going to second node with alias m and a separate node b and return them through the aliases." do
+      {:ok, query} =
+        Query.new()
+        |> Query.match()
+        |> Query.node(:n)
+        |> Query.relationship_from_to(:r, "Friend")
+        |> Query.node(:m)
+        |> Query.node(:b)
+        |> Query.return(:n)
+        |> Query.return(:r)
+        |> Query.return(:m)
+        |> Query.return(:b)
+        |> Query.build_query()
+
+      assert query == "MATCH (n)-[r:Friend]->(m),(b) RETURN n, r, m, b"
+    end
+
+    test "build query that would match on a node with alias n, relationship with alias r coming from the first one and going to second node m and another relationship t going from node m to node b and return them through the aliases." do
+      {:ok, query} =
+        Query.new()
+        |> Query.match()
+        |> Query.node(:n)
+        |> Query.relationship_from_to(:r)
+        |> Query.node(:m)
+        |> Query.relationship_from_to(:t)
+        |> Query.node(:b)
+        |> Query.return(:n)
+        |> Query.return(:r)
+        |> Query.return(:m)
+        |> Query.return(:t)
+        |> Query.return(:b)
+        |> Query.build_query()
+
+      assert query == "MATCH (n)-[r]->(m)-[t]->(b) RETURN n, r, m, t, b"
+    end
+
+    test "build query that would match on a node with alias n, relationship with alias r going to first one and coming from second node with alias m and return them through the aliases." do
+      {:ok, query} =
+        Query.new()
+        |> Query.match()
+        |> Query.node(:n)
+        |> Query.relationship_to_from(:r)
+        |> Query.node(:m)
+        |> Query.return(:n)
+        |> Query.return(:r)
+        |> Query.return(:m)
+        |> Query.build_query()
+
+      assert query == "MATCH (n)<-[r]-(m) RETURN n, r, m"
+    end
+
+    test "build query that would match on a node with alias n, relationship with alias r going to the first one and coming from second node m and another relationship t going to node m from node b and return them through the aliases." do
+      {:ok, query} =
+        Query.new()
+        |> Query.match()
+        |> Query.node(:n)
+        |> Query.relationship_to_from(:r)
+        |> Query.node(:m)
+        |> Query.relationship_to_from(:t)
+        |> Query.node(:b)
+        |> Query.return(:n)
+        |> Query.return(:r)
+        |> Query.return(:m)
+        |> Query.return(:t)
+        |> Query.return(:b)
+        |> Query.build_query()
+
+      assert query == "MATCH (n)<-[r]-(m)<-[t]-(b) RETURN n, r, m, t, b"
+    end
+
+    test "build query that would match on a node n, relationship r coming from the first one and going to second node m and another relationship t coming to node m and going from node b and return them through the aliases." do
+      {:ok, query} =
+        Query.new()
+        |> Query.match()
+        |> Query.node(:n)
+        |> Query.relationship_from_to(:r)
+        |> Query.node(:m)
+        |> Query.relationship_to_from(:t)
+        |> Query.node(:b)
+        |> Query.return(:n)
+        |> Query.return(:r)
+        |> Query.return(:m)
+        |> Query.return(:t)
+        |> Query.return(:b)
+        |> Query.build_query()
+
+      assert query == "MATCH (n)-[r]->(m)<-[t]-(b) RETURN n, r, m, t, b"
+    end
+  end
+
+  describe "OPTIONAL MATCH clause:" do
+    test "build query that would optional match on a node (with alias n, label Person and properties {age: 2, name: 'Mike'}) and return it through the alias." do
+      {:ok, query} =
+        Query.new()
+        |> Query.optional_match()
+        |> Query.node(:n, ["Person"], %{age: 2, name: "Mike"})
+        |> Query.return(:n)
+        |> Query.build_query()
+
+      assert query == "OPTIONAL MATCH (n:Person {age: 2, name: 'Mike'}) RETURN n"
+    end
+
+    test "build query that would optional match on a 2 nodes (with alias n and label Person and m and properties {age: 2, name: 'Mike'}) and return the node with alias n." do
+      {:ok, query} =
+        Query.new()
+        |> Query.optional_match()
+        |> Query.node(:n, ["Person"])
+        |> Query.node(:m, %{age: 2, name: "Mike"})
+        |> Query.return(:n)
+        |> Query.build_query()
+
+      assert query == "OPTIONAL MATCH (n:Person),(m {age: 2, name: 'Mike'}) RETURN n"
+    end
+
+    test "build query that would optional match on a 1 nodes (with alias n and label Person) and match on 2 nodes (with alias m and properties {age: 2, name: 'Mike'} and alias b) and return them through the aliases." do
+      {:ok, query} =
+        Query.new()
+        |> Query.optional_match()
+        |> Query.node(:n, ["Person"])
+        |> Query.match()
+        |> Query.node(:m, %{age: 2, name: "Mike"})
+        |> Query.node(:b)
+        |> Query.return(:n)
+        |> Query.return(:m)
+        |> Query.return(:b)
+        |> Query.build_query()
+
+      assert query == "OPTIONAL MATCH (n:Person) MATCH (m {age: 2, name: 'Mike'}),(b) RETURN n, m, b"
+    end
+
+    test "build query that would optional match on a node with alias n, relationship with alias r coming from the first one and going to second node with alias m and return them through the aliases." do
+      {:ok, query} =
+        Query.new()
+        |> Query.optional_match()
+        |> Query.node(:n)
+        |> Query.relationship_from_to(:r)
+        |> Query.node(:m)
+        |> Query.return(:n)
+        |> Query.return(:r)
+        |> Query.return(:m)
+        |> Query.build_query()
+
+      assert query == "OPTIONAL MATCH (n)-[r]->(m) RETURN n, r, m"
+    end
+
+    test "build query that would match on a node with alias n, relationship (with alias r type Friend coming from node n to node m and optional match on a separate node b with label Person and return them through the aliases." do
+      {:ok, query} =
+        Query.new()
+        |> Query.match()
+        |> Query.node(:n)
+        |> Query.relationship_from_to(:r, "Friend")
+        |> Query.node(:m)
+        |> Query.optional_match()
+        |> Query.node(:b, ["Person"])
+        |> Query.return(:n)
+        |> Query.return(:r)
+        |> Query.return(:m)
+        |> Query.return(:b)
+        |> Query.build_query()
+
+      assert query == "MATCH (n)-[r:Friend]->(m) OPTIONAL MATCH (b:Person) RETURN n, r, m, b"
+      end
+
+  end
+
+  describe "CREATE clause:" do
+    test "create node n with label Person and properties {age: 5, name: 'Mike', works: false}" do
+      {:ok, query} =
+        Query.new()
+        |> Query.create()
+        |> Query.node(:n, ["Person"], %{age: 5, name: "Mike", works: false})
+        |> Query.build_query()
+
+      assert query == "CREATE (n:Person {age: 5, name: 'Mike', works: false})"
+    end
+
+    test "create node n with label Person and properties {age: 5, name: 'Mike', works: false} and node m with label Person, Student, and return the nodes by alias" do
+      {:ok, query} =
+        Query.new()
+        |> Query.create()
+        |> Query.node(:n, ["Person"], %{age: 5, name: "Mike", works: false})
+        |> Query.node(:m, ["Person", "Student"])
+        |> Query.return(:n)
+        |> Query.return(:m)
+        |> Query.build_query()
+
+      assert query == "CREATE (n:Person {age: 5, name: 'Mike', works: false}),(m:Person:Student) RETURN n, m"
+    end
+
+    test "create node n with label Person and properties {age: 5, name: 'Mike', works: false} and relationship r of type KNOWS and node m with label Person, Student, and return them all by aliases" do
+      {:ok, query} =
+        Query.new()
+        |> Query.create()
+        |> Query.node(:n, ["Person"], %{age: 5, name: "Mike", works: false})
+        |> Query.relationship_from_to(:r, "KNOWS")
+        |> Query.node(:m, ["Person", "Student"])
+        |> Query.return(:n)
+        |> Query.return(:r)
+        |> Query.return(:m)
+        |> Query.build_query()
+
+      assert query == "CREATE (n:Person {age: 5, name: 'Mike', works: false})-[r:KNOWS]->(m:Person:Student) RETURN n, r, m"
+    end
+  end
+
+  describe "MERGE clause:" do
+    test "merge node n with label Person and properties {age: 5, name: 'Mike', works: false} and node m with label Person, Student, and return the nodes by alias" do
+      {:ok, query} =
+        Query.new()
+        |> Query.merge()
+        |> Query.node(:n, ["Person"], %{age: 5, name: "Mike", works: false})
+        |> Query.node(:m, ["Person", "Student"])
+        |> Query.return(:n)
+        |> Query.return(:m)
+        |> Query.build_query()
+
+      assert query == "MERGE (n:Person {age: 5, name: 'Mike', works: false}),(m:Person:Student) RETURN n, m"
+    end
+
+    test "merge node n with label Person and properties {age: 5, name: 'Mike', works: false} and relationship r of type KNOWS and node m with label Person, Student, and return them all by aliases" do
+      {:ok, query} =
+        Query.new()
+        |> Query.merge()
+        |> Query.node(:n, ["Person"], %{age: 5, name: "Mike", works: false})
+        |> Query.relationship_from_to(:r, "KNOWS")
+        |> Query.node(:m, ["Person", "Student"])
+        |> Query.return(:n)
+        |> Query.return(:r)
+        |> Query.return(:m)
+        |> Query.build_query()
+
+      assert query == "MERGE (n:Person {age: 5, name: 'Mike', works: false})-[r:KNOWS]->(m:Person:Student) RETURN n, r, m"
+    end
+  end
+
+  describe "WHERE clause:" do
+    test "build query that would match on a node n where age property is bigger than 5 and return it through the alias." do
+      {:ok, query} =
+        Query.new()
+        |> Query.match()
+        |> Query.node(:n)
+        |> Query.where(:n, "age", :bigger, 5)
+        |> Query.return(:n)
+        |> Query.build_query()
+
+      assert query == "MATCH (n) WHERE n.age > 5 RETURN n"
+    end
+
+    test "build query that would match on a node n where age property is not bigger or equal than 5 and return it through the alias." do
+      {:ok, query} =
+        Query.new()
+        |> Query.match()
+        |> Query.node(:n)
+        |> Query.where_not(:n, "age", :smaller_or_equal, 5)
+        |> Query.return(:n)
+        |> Query.build_query()
+
+      assert query == "MATCH (n) WHERE NOT n.age <= 5 RETURN n"
+    end
+
+    test "build query that would match on a node n where age property is bigger than 5 and where name property not contains 'A' string and return it through the alias." do
+      {:ok, query} =
+        Query.new()
+        |> Query.match()
+        |> Query.node(:n)
+        |> Query.where(:n, "age", :bigger, 5)
+        |> Query.and_not_where(:n, "name", :contains, "A")
+        |> Query.return(:n)
+        |> Query.build_query()
+
+      assert query == "MATCH (n) WHERE n.age > 5 AND NOT n.name CONTAINS 'A' RETURN n"
+    end
+
+    test "build query that would match on a node n where age property is bigger than 5 and where name property not contains 'A' string or where hobby property is present in list ['sports', 'cooking', 'reading'] and return it through the alias." do
+      {:ok, query} =
+        Query.new()
+        |> Query.match()
+        |> Query.node(:n)
+        |> Query.where(:n, "age", :bigger, 5)
+        |> Query.and_not_where(:n, "name", :contains, "A")
+        |> Query.or_where(:n, "hobby", :in, ["sports", "cooking", "reading"])
+        |> Query.return(:n)
+        |> Query.build_query()
+
+      assert query ==
+               "MATCH (n) WHERE n.age > 5 AND NOT n.name CONTAINS 'A' OR n.hobby IN ['sports', 'cooking', 'reading'] RETURN n"
+    end
+
+    test "build query that would match on a node n and node m where age property of n is bigger than 5 or where balance property of m not null return nodes by the alias." do
+      {:ok, query} =
+        Query.new()
+        |> Query.match()
+        |> Query.node(:n)
+        |> Query.node(:m)
+        |> Query.where(:n, "age", :bigger, 5)
+        |> Query.or_not_where(:m, "balance", :equals, nil)
+        |> Query.return(:n)
+        |> Query.return(:m)
+        |> Query.build_query()
+
+      assert query == "MATCH (n),(m) WHERE n.age > 5 OR NOT m.balance = null RETURN n, m"
+    end
+  end
+
+  describe "ORDER BY clause:" do
+    test "build query that would match on a node n, return it through the alias and order by age property ascending." do
+      {:ok, query} =
+        Query.new()
+        |> Query.match()
+        |> Query.node(:n)
+        |> Query.return(:n)
+        |> Query.order_by(:n, "age")
+        |> Query.build_query()
+
+      assert query == "MATCH (n) RETURN n ORDER BY n.age ASC"
+    end
+
+    test "build query that would match on a node n, return it through the alias and order by age property ascending and name property descending." do
+      {:ok, query} =
+        Query.new()
+        |> Query.match()
+        |> Query.node(:n)
+        |> Query.order_by(:n, "age")
+        |> Query.order_by(:n, "name", false)
+        |> Query.return(:n)
+        |> Query.build_query()
+
+      assert query == "MATCH (n) ORDER BY n.age ASC, n.name DESC RETURN n"
+    end
+  end
+
+  describe "LIMIT clause:" do
+    test "build query that would match on a node n, return it through the alias and limit output to 10 values." do
+      {:ok, query} =
+        Query.new()
+        |> Query.match()
+        |> Query.node(:n)
+        |> Query.return(:n)
+        |> Query.limit(10)
+        |> Query.build_query()
+
+      assert query == "MATCH (n) RETURN n LIMIT 10"
+    end
+  end
+
+  describe "SKIP clause:" do
+    test "build query that would match on a node n, return it through the alias and skip 10 values." do
+      {:ok, query} =
+        Query.new()
+        |> Query.match()
+        |> Query.node(:n)
+        |> Query.return(:n)
+        |> Query.skip(10)
+        |> Query.build_query()
+
+      assert query == "MATCH (n) RETURN n SKIP 10"
+    end
+  end
+
+  describe "WITH clause:" do
+    test "build query that would match on a node n with n alias as person and return it through the alias person." do
+      {:ok, query} =
+        Query.new()
+        |> Query.match()
+        |> Query.node(:n)
+        |> Query.with(:n, :person)
+        |> Query.return(:person)
+        |> Query.build_query()
+
+      assert query == "MATCH (n) WITH n AS person RETURN person"
+    end
+
+    test "build query that would match on a node n with property age alias as personAge and return it through the alias personAge." do
+      {:ok, query} =
+        Query.new()
+        |> Query.match()
+        |> Query.node(:n)
+        |> Query.with_property(:n, "age", :personAge)
+        |> Query.return(:personAge)
+        |> Query.build_query()
+
+      assert query == "MATCH (n) WITH n.age AS personAge RETURN personAge"
+    end
+
+    test "build query that would match on a node n with function labels() called on it and with alias as Labels and return it through the alias Labels." do
+      {:ok, query} =
+        Query.new()
+        |> Query.match()
+        |> Query.node(:n)
+        |> Query.with_function("labels", :n, :Labels)
+        |> Query.return(:Labels)
+        |> Query.build_query()
+
+      assert query == "MATCH (n) WITH labels(n) AS Labels RETURN Labels"
+    end
+
+    test "build query that would match on a node n with property name and function toUpper() on it called on it and with alias as Labels and return it through the alias Labels." do
+      {:ok, query} =
+        Query.new()
+        |> Query.match()
+        |> Query.node(:n)
+        |> Query.with_function_and_property("toUpper", :n, "name", :Name)
+        |> Query.return(:Name)
+        |> Query.build_query()
+
+      assert query == "MATCH (n) WITH toUpper(n.name) AS Name RETURN Name"
+    end
+
+    test "build query that would match on a node n with property name and function toUpper() on it called on it and with alias as Labels and another node m and return it through the alias Labels, m." do
+      {:ok, query} =
+        Query.new()
+        |> Query.match()
+        |> Query.node(:n)
+        |> Query.node(:m)
+        |> Query.with_function_and_property("toUpper", :n, "name", :Name)
+        |> Query.with(:m)
+        |> Query.return(:Name)
+        |> Query.return(:m)
+        |> Query.build_query()
+
+      assert query == "MATCH (n),(m) WITH toUpper(n.name) AS Name, m RETURN Name, m"
+    end
+  end
+
+  describe "SET clause:" do
+    test "build query that would match on a node n, set age property to 5 and return it through the alias." do
+      {:ok, query} =
+        Query.new()
+        |> Query.match()
+        |> Query.node(:n)
+        |> Query.set_property(:n, "age", 5)
+        |> Query.return(:n)
+        |> Query.build_query()
+
+      assert query == "MATCH (n) SET n.age = 5 RETURN n"
+    end
+
+    test "build query that would match on a node n, set name property to 'John' and return it through the alias." do
+      {:ok, query} =
+        Query.new()
+        |> Query.match()
+        |> Query.node(:n)
+        |> Query.set_property(:n, "name", "John")
+        |> Query.return(:n)
+        |> Query.build_query()
+
+      assert query == "MATCH (n) SET n.name = 'John' RETURN n"
+    end
+
+    test "build query that would match on a node n, set name property to uppercase 'john' and return it through the alias." do
+      {:ok, query} =
+        Query.new()
+        |> Query.match()
+        |> Query.node(:n)
+        |> Query.set_property(:n, "name", "toUpper('john')")
+        |> Query.return(:n)
+        |> Query.build_query()
+
+      assert query == "MATCH (n) SET n.name = toUpper('john') RETURN n"
+    end
+
+    test "build query that would match on a node n, set works property to false and hobby null, and return it through the alias." do
+      {:ok, query} =
+        Query.new()
+        |> Query.match()
+        |> Query.node(:n)
+        |> Query.set_property(:n, "works", false)
+        |> Query.set_property(:n, "hobby", nil)
+        |> Query.return(:n)
+        |> Query.build_query()
+
+      assert query == "MATCH (n) SET n.works = false, n.hobby = null RETURN n"
+    end
+
+    test "build query that would match on a node n, set some properties and return it through the alias." do
+      {:ok, query} =
+        Query.new()
+        |> Query.match()
+        |> Query.node(:n)
+        |> Query.set(:n, %{name: "Mike", age: 10, works: false})
+        |> Query.return(:n)
+        |> Query.build_query()
+
+      assert query == "MATCH (n) SET n = {age: 10, name: 'Mike', works: false} RETURN n"
+    end
+
+    test "build query that would match on a node n, set/update some properties and return it through the alias." do
+      {:ok, query} =
+        Query.new()
+        |> Query.match()
+        |> Query.node(:n)
+        |> Query.set(:n, %{name: "Mike", age: 10, works: false}, "+=")
+        |> Query.return(:n)
+        |> Query.build_query()
+
+      assert query == "MATCH (n) SET n += {age: 10, name: 'Mike', works: false} RETURN n"
+    end
+
+    test "build query that would match on a node n, set to another node m and update stuff property for m, return them through the aliases." do
+      {:ok, query} =
+        Query.new()
+        |> Query.match()
+        |> Query.node(:n)
+        |> Query.node(:m)
+        |> Query.set(:n, :m)
+        |> Query.set_property(:m, "stuff", ["Hi", 55, nil, false])
+        |> Query.return(:n)
+        |> Query.return(:m)
+        |> Query.build_query()
+
+      assert query == "MATCH (n),(m) SET n = m, m.stuff = ['Hi', 55, null, false] RETURN n, m"
+    end
+  end
+
+  describe "ON MATCH SET clause:" do
+    test "merge node n with label Person and properties {age: 5, name: 'Mike', works: false} and on match set update properties and return the node by alias" do
+      {:ok, query} =
+        Query.new()
+        |> Query.merge()
+        |> Query.node(:n, ["Person"], %{age: 5, name: "Mike", works: false})
+        |> Query.on_match_set(:n, %{age: 50, name: "Michael", works: true, hobbies: ["sports", "cooking", "reading"]}, "+=")
+        |> Query.return(:n)
+        |> Query.build_query()
+
+      assert query == "MERGE (n:Person {age: 5, name: 'Mike', works: false}) ON MATCH SET n += {age: 50, hobbies: ['sports', 'cooking', 'reading'], name: 'Michael', works: true} RETURN n"
+    end
+
+    test "merge node n with label Person and properties {age: 5, name: 'Mike', works: false} and on match set age to 50 and return the node by alias" do
+      {:ok, query} =
+        Query.new()
+        |> Query.merge()
+        |> Query.node(:n, ["Person"], %{age: 5, name: "Mike", works: false})
+        |> Query.on_match_set_property(:n, "age", 50)
+        |> Query.return(:n)
+        |> Query.build_query()
+
+      assert query == "MERGE (n:Person {age: 5, name: 'Mike', works: false}) ON MATCH SET n.age = 50 RETURN n"
+    end
+
+    test "merge node n with label Person and properties {age: 5, name: 'Mike', works: false} and relationship r of type KNOWS and node m with label Person, Student, on match set node n and relationship r and return them all by aliases" do
+      {:ok, query} =
+        Query.new()
+        |> Query.merge()
+        |> Query.node(:n, ["Person"], %{age: 5, name: "Mike", works: false})
+        |> Query.relationship_from_to(:r, "KNOWS")
+        |> Query.node(:m, ["Person", "Student"])
+        |> Query.on_match_set(:n, %{age: 50, name: "Michael", works: true, hobbies: ["sports", "cooking", "reading"]}, "+=")
+        |> Query.on_match_set(:r, %{duration: 5})
+        |> Query.return(:n)
+        |> Query.return(:r)
+        |> Query.return(:m)
+        |> Query.build_query()
+
+      assert query == "MERGE (n:Person {age: 5, name: 'Mike', works: false})-[r:KNOWS]->(m:Person:Student) ON MATCH SET n += {age: 50, hobbies: ['sports', 'cooking', 'reading'], name: 'Michael', works: true}, r = {duration: 5} RETURN n, r, m"
+    end
+  end
+
+  describe "ON CREATE SET clause:" do
+    test "merge node n with label Person and properties {age: 5, name: 'Mike', works: false} and on match set update properties and return the node by alias" do
+      {:ok, query} =
+        Query.new()
+        |> Query.merge()
+        |> Query.node(:n, ["Person"], %{age: 25, name: "Mike", works: true})
+        |> Query.on_create_set(:n, %{hobbies: ["sports", "cooking", "reading"], stuff: nil}, "+=")
+        |> Query.return(:n)
+        |> Query.build_query()
+
+      assert query == "MERGE (n:Person {age: 25, name: 'Mike', works: true}) ON CREATE SET n += {hobbies: ['sports', 'cooking', 'reading'], stuff: null} RETURN n"
+    end
+
+    test "merge node n with label Person and properties {age: 5, name: 'Mike', works: false} and on create set hobbies property to a list of hobbies and return the node by alias" do
+      {:ok, query} =
+        Query.new()
+        |> Query.merge()
+        |> Query.node(:n, ["Person"], %{age: 5, name: "Mike", works: false})
+        |> Query.on_create_set_property(:n, "hobbies", ["sports", "cooking", "reading"])
+        |> Query.return(:n)
+        |> Query.build_query()
+
+      assert query == "MERGE (n:Person {age: 5, name: 'Mike', works: false}) ON CREATE SET n.hobbies = ['sports', 'cooking', 'reading'] RETURN n"
+    end
+
+    test "merge node n with label Person and properties {age: 5, name: 'Mike', works: false} and relationship r of type KNOWS and node m with label Person, Student, set on create node n and relationship r and return them all by aliases" do
+      {:ok, query} =
+        Query.new()
+        |> Query.merge()
+        |> Query.node(:n, ["Person"], %{age: 5, name: "Mike", works: false})
+        |> Query.relationship_from_to(:r, "KNOWS")
+        |> Query.node(:m, ["Person", "Student"])
+        |> Query.on_create_set(:n, %{age: 50, name: "Michael", works: true, hobbies: ["sports", "cooking", "reading"]}, "+=")
+        |> Query.on_create_set_property(:r, "duration", 5)
+        |> Query.return(:n)
+        |> Query.return(:r)
+        |> Query.return(:m)
+        |> Query.build_query()
+
+      assert query == "MERGE (n:Person {age: 5, name: 'Mike', works: false})-[r:KNOWS]->(m:Person:Student) ON CREATE SET n += {age: 50, hobbies: ['sports', 'cooking', 'reading'], name: 'Michael', works: true}, r.duration = 5 RETURN n, r, m"
+    end
+
+    test "merge node n with label Person and some properties and relationship r of type KNOWS and node m with label Person, Student, on create set node n and relationship r and on match set node m, and return them all by aliases" do
+      {:ok, query} =
+        Query.new()
+        |> Query.merge()
+        |> Query.node(:n, ["Person"], %{age: 5, name: "Mike", works: false})
+        |> Query.relationship_from_to(:r, "KNOWS")
+        |> Query.node(:m, ["Person", "Student"], %{name: "Bob"})
+        |> Query.on_create_set(:n, %{age: 50, name: "Michael", works: true, hobbies: ["sports", "cooking", "reading"]}, "+=")
+        |> Query.on_create_set_property(:r, "duration", 5)
+        |> Query.on_match_set_property(:m, "age", 25)
+        |> Query.return(:n)
+        |> Query.return(:r)
+        |> Query.return(:m)
+        |> Query.build_query()
+
+      assert query == "MERGE (n:Person {age: 5, name: 'Mike', works: false})-[r:KNOWS]->(m:Person:Student {name: 'Bob'}) ON CREATE SET n += {age: 50, hobbies: ['sports', 'cooking', 'reading'], name: 'Michael', works: true}, r.duration = 5 ON MATCH SET m.age = 25 RETURN n, r, m"
+    end
+  end
+
+  describe "DELETE clause:" do
+    test "build query that would match on a node n and delete it on alias." do
+      {:ok, query} =
+        Query.new()
+        |> Query.match()
+        |> Query.node(:n)
+        |> Query.delete(:n)
+        |> Query.build_query()
+
+      assert query == "MATCH (n) DELETE n"
+    end
+
+    test "build query that would match on a node n and m, and delete them on aliases." do
+      {:ok, query} =
+        Query.new()
+        |> Query.match()
+        |> Query.node(:n)
+        |> Query.node(:m)
+        |> Query.delete(:n)
+        |> Query.delete(:m)
+        |> Query.build_query()
+
+      assert query == "MATCH (n),(m) DELETE n, m"
+    end
+
+    test "build query that would match on a node n, relationahip r, node m, and separate node b with label Person and delete relationship r and node b." do
+      {:ok, query} =
+        Query.new()
+        |> Query.match()
+        |> Query.node(:n)
+        |> Query.relationship_from_to(:r)
+        |> Query.node(:m)
+        |> Query.node(:b, ["Person"])
+        |> Query.delete(:r)
+        |> Query.delete(:b)
+        |> Query.build_query()
+
+      assert query == "MATCH (n)-[r]->(m),(b:Person) DELETE r, b"
+    end
+  end
+
+  describe "RETURN clause:" do
+    test "build query that would match on a node n and return it on alias." do
+      {:ok, query} =
+        Query.new()
+        |> Query.match()
+        |> Query.node(:n)
+        |> Query.return(:n)
+        |> Query.build_query()
+
+      assert query == "MATCH (n) RETURN n"
+    end
+
+    test "build query that would match on a node n with label Person and return it as Person." do
+      {:ok, query} =
+        Query.new()
+        |> Query.match()
+        |> Query.node(:n, ["Person"])
+        |> Query.return(:n, "Person")
+        |> Query.build_query()
+
+      assert query == "MATCH (n:Person) RETURN n AS Person"
+    end
+
+    test "build query that would match on a node n, relationship r and node m, and return n with property age, r with function type and node m function on property name." do
+      {:ok, query} =
+        Query.new()
+        |> Query.match()
+        |> Query.node(:n)
+        |> Query.relationship_from_to(:r)
+        |> Query.node(:m)
+        |> Query.return_property(:n, "age")
+        |> Query.return_function("type", :r)
+        |> Query.return_function_and_property("toUpper", :m, "name")
+        |> Query.build_query()
+
+      assert query == "MATCH (n)-[r]->(m) RETURN n.age, type(r), toUpper(m.name)"
+    end
+
+    test "build query that would match on a node n, relationship r and node m, and return n with property age as Age, r with function type as Type and node m function on property name as Name." do
+      {:ok, query} =
+        Query.new()
+        |> Query.match()
+        |> Query.node(:n)
+        |> Query.relationship_from_to(:r)
+        |> Query.node(:m)
+        |> Query.return_property(:n, "age", "Age")
+        |> Query.return_function("type", :r, "Type")
+        |> Query.return_function_and_property("toUpper", :m, "name", "Name")
+        |> Query.build_query()
+
+      assert query == "MATCH (n)-[r]->(m) RETURN n.age AS Age, type(r) AS Type, toUpper(m.name) AS Name"
+    end
+  end
+
+  describe "RETURN DISTINCT clause:" do
+    test "build query that would match on a node n and return distinct it on alias." do
+      {:ok, query} =
+        Query.new()
+        |> Query.match()
+        |> Query.node(:n)
+        |> Query.return_distinct(:n)
+        |> Query.build_query()
+
+      assert query == "MATCH (n) RETURN DISTINCT n"
+    end
+
+
+    test "build query that would match on a node n, relationship r and node m, and return distinct n with property age, r with function type and node m function on property name." do
+      {:ok, query} =
+        Query.new()
+        |> Query.match()
+        |> Query.node(:n)
+        |> Query.relationship_from_to(:r)
+        |> Query.node(:m)
+        |> Query.return_distinct_property(:n, "age")
+        |> Query.return_distinct_function("type", :r)
+        |> Query.return_distinct_function_and_property("toUpper", :m, "name")
+        |> Query.build_query()
+
+      assert query == "MATCH (n)-[r]->(m) RETURN DISTINCT n.age, type(r), toUpper(m.name)"
+    end
+
+    test "build query that would match on a node n, relationship r and node m, and return distinct n with property age as Age, r with function type as Type and node m function on property name as Name." do
+      {:ok, query} =
+        Query.new()
+        |> Query.match()
+        |> Query.node(:n)
+        |> Query.relationship_from_to(:r)
+        |> Query.node(:m)
+        |> Query.return_distinct_property(:n, "age", "Age")
+        |> Query.return_distinct_function("type", :r, "Type")
+        |> Query.return_distinct_function_and_property("toUpper", :m, "name", "Name")
+        |> Query.build_query()
+
+      assert query == "MATCH (n)-[r]->(m) RETURN DISTINCT n.age AS Age, type(r) AS Type, toUpper(m.name) AS Name"
+    end
+  end
+end
