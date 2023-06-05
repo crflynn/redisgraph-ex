@@ -36,40 +36,69 @@ defmodule RedisGraph.Util do
   end
 
   def properties_to_string(properties) do
-    props = cond do
-      is_map(properties) and map_size(properties) > 0 -> Stream.map(properties, fn({k, x}) -> "#{k}: #{converted_value(x)}" end) |> Enum.join(", ")
-      :true -> ""
-    end
-    IO.inspect(props)
+    props =
+      cond do
+        is_map(properties) and map_size(properties) > 0 ->
+          Stream.map(properties, fn {k, x} -> "#{k}: #{converted_value(x)}" end)
+          |> Enum.join(", ")
+        true ->
+          ""
+      end
+
+    # IO.inspect(props)
     case String.length(props) do
       0 -> ""
-      _ -> "{#{props}}"
+      _ -> " {#{props}}"
     end
   end
 
   def labels_to_string(labels) do
     cond do
       is_list(labels) and length(labels) > 0 -> ":" <> Enum.join(labels, ":")
-      :true -> ""
+      true -> ""
     end
   end
 
-  def type_to_string(type) do # need to check if if can have multiple types
+  # need to check if if can have multiple types
+  def type_to_string(type) do
     cond do
       is_binary(type) and String.length(type) > 0 -> ":" <> type
-      :true -> ""
+      true -> ""
     end
   end
 
+  @spec converted_value(any()) :: any()
   def converted_value(val) do
-    IO.inspect(val)
+    # IO.inspect(val)
     cond do
-      is_binary(val) ->  "'" <> val <> "'"
-      is_number(val) -> val
-      is_boolean(val) -> "#{val}"
-      is_nil(val) -> "null"
-      true -> "value type is not supported"
+      is_binary(val) and String.contains?(val, "(") and String.contains?(val, ")") -> # check if string contains function
+        val
+
+      is_binary(val) ->
+        "'" <> val <> "'"
+
+      is_number(val) ->
+        val
+
+      is_boolean(val) ->
+        "#{val}"
+
+      is_nil(val) ->
+        "null"
+
+      is_atom(val) ->
+        Atom.to_string(val)
+
+      is_list(val) ->
+        "[#{Stream.map(val, fn individual_value -> converted_value(individual_value) end) |> Enum.join(", ")}]"
+
+      is_map(val) ->
+        "{#{Stream.map(val, fn {k, x} -> "#{k}: #{converted_value(x)}" end)  |> Enum.join(", ")}}"
+
+      true ->
+        "value type is not supported"
     end
+
   end
 
 end
