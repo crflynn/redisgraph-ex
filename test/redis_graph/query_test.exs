@@ -271,6 +271,202 @@ defmodule RedisGraph.QueryTest do
 
       assert query == "MATCH (n)-[r]->(m)<-[t]-(b) RETURN n, r, m, t, b"
     end
+
+    test "build query that would give error since node alias is provided as string instead of atom." do
+      {:error, query} =
+        Query.new()
+        |> Query.match()
+        |> Query.node("n")
+        |> Query.return(:n)
+        |> Query.build_query()
+
+      assert query == "Provided alias is not an atom, only atoms are accepted. E.g. new() |> match() |> node(:n) |> relationship_from_to(:r) |> node(:m) |> ..."
+    end
+
+    test "build query that would give error since node labels is provided not as list." do
+      {:error, query} =
+        Query.new()
+        |> Query.match()
+        |> Query.node(:n, "test")
+        |> Query.return(:n)
+        |> Query.build_query()
+
+      assert query == "Wrong parameters provided to node(:n)"
+    end
+
+    test "build query that would give error since node labels is provided not as list and node parameters not as map." do
+      {:error, query} =
+        Query.new()
+        |> Query.match()
+        |> Query.node(:n, "test", "test2")
+        |> Query.build_query()
+
+      assert query == "Wrong parameters provided to node(:n)"
+    end
+
+    test "build query that would give error since not all node labels are strings." do
+      {:error, query} =
+        Query.new()
+        |> Query.match()
+        |> Query.node(:n, ["Person", 2, nil])
+        |> Query.return(:n)
+        |> Query.build_query()
+
+      assert query == "Provided labels must all be of string type."
+    end
+
+    test "build query that would give error since relationship alias is not atom." do
+      {:error, query} =
+        Query.new()
+        |> Query.match()
+        |> Query.node(:n, ["Person"])
+        |> Query.relationship_from_to("r")
+        |> Query.node(:m)
+        |> Query.return(:n)
+        |> Query.build_query()
+
+      assert query == "Provided alias is not an atom, only atoms are accepted. E.g. new() |> match() |> node(:n) |> relationship_from_to(:r) |> node(:m) |> ..."
+    end
+
+    test "build query that would give error since relationship type is not string." do
+      {:error, query} =
+        Query.new()
+        |> Query.match()
+        |> Query.node(:n, ["Person"])
+        |> Query.relationship_from_to(:r, ["Knows"])
+        |> Query.node(:m)
+        |> Query.build_query()
+
+      assert query == "Wrong parameters provided to relationship_from_to(:r)"
+    end
+
+    test "build query that would give error since relationship type is not string and property is not map." do
+      {:error, query} =
+        Query.new()
+        |> Query.match()
+        |> Query.node(:n, ["Person"])
+        |> Query.relationship_from_to(:r, ["Knows"], "property")
+        |> Query.node(:m)
+        |> Query.build_query()
+
+      assert query == "Wrong parameters provided to relationship_from_to(:r)"
+    end
+
+    test "build query that would give error since relationship doesn't start from a node." do
+      {:error, query} =
+        Query.new()
+        |> Query.match()
+        |> Query.relationship_from_to(:r)
+        |> Query.node(:m)
+        |> Query.build_query()
+
+      assert query == "Relationship has to originate from a Node. Add a Node first with node() function"
+    end
+
+    test "build query that would give error since relationship doesn't point to a node." do
+      {:error, query} =
+        Query.new()
+        |> Query.match()
+        |> Query.node(:n, ["Person"])
+        |> Query.relationship_from_to(:r)
+        |> Query.build_query()
+
+      assert query == "MATCH clause cannot end with a Relationship, add a Node at the end. E.g. new() |> match() |> node(:n) |> relationship_from_to(:r) |> node(:m) |> ..."
+    end
+
+    test "build query that would give error since there are 2 relationships in a row." do
+      {:error, query} =
+        Query.new()
+        |> Query.match()
+        |> Query.node(:n, ["Person"])
+        |> Query.relationship_from_to(:r)
+        |> Query.relationship_from_to(:b)
+        |> Query.node(:m)
+        |> Query.build_query()
+
+      assert query == "You cannot have multiple Relationships in a row. Add a Node between them with node() function"
+    end
+
+    test "build query that would give error since reverse relationship alias is not atom." do
+      {:error, query} =
+        Query.new()
+        |> Query.match()
+        |> Query.node(:n, ["Person"])
+        |> Query.relationship_to_from("r")
+        |> Query.node(:m)
+        |> Query.build_query()
+
+      assert query == "Provided alias is not an atom, only atoms are accepted. E.g. new() |> match() |> node(:n) |> relationship_from_to(:r) |> node(:m) |> ..."
+    end
+
+    test "build query that would give error since reverse relationship type is not string." do
+      {:error, query} =
+        Query.new()
+        |> Query.match()
+        |> Query.node(:n, ["Person"])
+        |> Query.relationship_to_from(:r, ["Knows"])
+        |> Query.node(:m)
+        |> Query.build_query()
+
+      assert query == "Wrong parameters provided to relationship_to_from(:r)"
+    end
+
+    test "build query that would give error since reverse relationship type is not string and property is not map." do
+      {:error, query} =
+        Query.new()
+        |> Query.match()
+        |> Query.node(:n, ["Person"])
+        |> Query.relationship_to_from(:r, ["Knows"], "property")
+        |> Query.node(:m)
+        |> Query.build_query()
+
+      assert query == "Wrong parameters provided to relationship_to_from(:r)"
+    end
+
+     test "build query that would give error since reverse relationship doesn't start from a node." do
+      {:error, query} =
+        Query.new()
+        |> Query.match()
+        |> Query.relationship_to_from(:r)
+        |> Query.node(:m)
+        |> Query.build_query()
+
+      assert query == "Relationship has to point to a Node. Add a Node first with node() function"
+    end
+
+    test "build query that would give error since reverse relationship doesn't point to a node." do
+      {:error, query} =
+        Query.new()
+        |> Query.match()
+        |> Query.node(:n, ["Person"])
+        |> Query.relationship_to_from(:r)
+        |> Query.build_query()
+
+      assert query == "MATCH clause cannot end with a Relationship, add a Node at the end. E.g. new() |> match() |> node(:n) |> relationship_from_to(:r) |> node(:m) |> ..."
+    end
+
+    test "build query that would give error since there are 2 reverse relationships in a row." do
+      {:error, query} =
+        Query.new()
+        |> Query.match()
+        |> Query.node(:n, ["Person"])
+        |> Query.relationship_to_from(:r)
+        |> Query.relationship_to_from(:b)
+        |> Query.node(:m)
+        |> Query.build_query()
+
+      assert query == "You cannot have multiple Relationships in a row. Add a Node between them with node() function"
+    end
+
+    test "build query that would give error since context is wrong." do
+      {:error, query} =
+        Query.match(%{error: nil, test: "test"})
+        |> Query.node(:n, ["Person", 2, nil])
+        |> Query.build_query()
+
+      assert query == "Please instantiate the query first with new(). Istead have e.g. new() |> match |> node(:n) |> return(:n) ..."
+    end
+
   end
 
   describe "OPTIONAL MATCH clause:" do
@@ -346,6 +542,38 @@ defmodule RedisGraph.QueryTest do
       assert query == "MATCH (n)-[r:Friend]->(m) OPTIONAL MATCH (b:Person) RETURN n, r, m, b"
       end
 
+       test "build query that would give error since node alias is provided as string instead of atom on ." do
+      {:error, query} =
+        Query.new()
+        |> Query.optional_match()
+        |> Query.node("n")
+        |> Query.return(:n)
+        |> Query.build_query()
+
+      assert query == "Provided alias is not an atom, only atoms are accepted. E.g. new() |> match() |> node(:n) |> relationship_from_to(:r) |> node(:m) |> ..."
+    end
+
+    test "build query that would give error since node labels is provided not as list and node parameters not as map." do
+      {:error, query} =
+        Query.new()
+        |> Query.optional_match()
+        |> Query.node(:n, "test", "test2")
+        |> Query.build_query()
+
+      assert query == "Wrong parameters provided to node(:n)"
+    end
+
+     test "build query that would give error since reverse relationship type is not string and property is not map." do
+      {:error, query} =
+        Query.new()
+        |> Query.optional_match()
+        |> Query.node(:n, ["Person"])
+        |> Query.relationship_to_from(:r, ["Knows"], "property")
+        |> Query.node(:m)
+        |> Query.build_query()
+
+      assert query == "Wrong parameters provided to relationship_to_from(:r)"
+    end
   end
 
   describe "CREATE clause:" do
@@ -386,6 +614,58 @@ defmodule RedisGraph.QueryTest do
 
       assert query == "CREATE (n:Person {age: 5, name: 'Mike', works: false})-[r:KNOWS]->(m:Person:Student) RETURN n, r, m"
     end
+
+    test "build query that would give error since node labels is provided not as list." do
+      {:error, query} =
+        Query.new()
+        |> Query.create()
+        |> Query.node(:b, "test")
+        |> Query.build_query()
+
+      assert query == "Wrong parameters provided to node(:b)"
+    end
+
+    test "build query that would give error since node labels is provided not as list and node parameters not as map." do
+      {:error, query} =
+        Query.new()
+        |> Query.create()
+        |> Query.node(:n, "test", "test2")
+        |> Query.build_query()
+
+      assert query == "Wrong parameters provided to node(:n)"
+    end
+
+    test "build query that would give error since not all node labels are strings." do
+      {:error, query} =
+        Query.new()
+        |> Query.create()
+        |> Query.node(:n, ["Person", 2, nil])
+        |> Query.build_query()
+
+      assert query == "Provided labels must all be of string type."
+    end
+
+    test "build query that would give error since context is wrong." do
+      {:error, query} =
+        Query.create(%{error: nil, test: "test"})
+        |> Query.node(:n)
+        |> Query.build_query()
+
+      assert query == "Please instantiate the query first with new(). Istead have e.g. new() |> match |> node(:n) |> return(:n) ..."
+    end
+
+    test "build query that would give error since reverse relationship type is not string and property is not map." do
+      {:error, query} =
+        Query.new()
+        |> Query.create()
+        |> Query.node(:n, ["Person"])
+        |> Query.relationship_to_from(:r, ["Knows"], "property")
+        |> Query.node(:m)
+        |> Query.build_query()
+
+      assert query == "Wrong parameters provided to relationship_to_from(:r)"
+    end
+
   end
 
   describe "MERGE clause:" do
@@ -415,6 +695,37 @@ defmodule RedisGraph.QueryTest do
         |> Query.build_query()
 
       assert query == "MERGE (n:Person {age: 5, name: 'Mike', works: false})-[r:KNOWS]->(m:Person:Student) RETURN n, r, m"
+    end
+
+    test "build query that would give error since node labels is provided not as list and node parameters not as map." do
+      {:error, query} =
+        Query.new()
+        |> Query.merge()
+        |> Query.node(:n, "test", "test2")
+        |> Query.build_query()
+
+      assert query == "Wrong parameters provided to node(:n)"
+    end
+
+    test "build query that would give error since reverse relationship type is not string and property is not map." do
+      {:error, query} =
+        Query.new()
+        |> Query.merge()
+        |> Query.node(:n, ["Person"])
+        |> Query.relationship_to_from(:r, ["Knows"], "property")
+        |> Query.node(:m)
+        |> Query.build_query()
+
+      assert query == "Wrong parameters provided to relationship_to_from(:r)"
+    end
+
+    test "build query that would give error since context is wrong." do
+      {:error, query} =
+        Query.merge(%{error: nil, test: "test"})
+        |> Query.node(:n)
+        |> Query.build_query()
+
+      assert query == "Please instantiate the query first with new(). Istead have e.g. new() |> match |> node(:n) |> return(:n) ..."
     end
   end
 
@@ -485,6 +796,94 @@ defmodule RedisGraph.QueryTest do
 
       assert query == "MATCH (n),(m) WHERE n.age > 5 OR NOT m.balance = null RETURN n, m"
     end
+
+    test "build query that would giver error because order of logical operators in where clause is wrong." do
+      {:error, query} =
+        Query.new()
+        |> Query.match()
+        |> Query.node(:n)
+        |> Query.and_where(:n, "age", :bigger, 5)
+        |> Query.where(:n, "age", :bigger, 5)
+        |> Query.return(:n)
+        |> Query.build_query()
+
+      assert query == "Provided order of WHERE clauses is wrong. You first call either where() or where_not() and then any number of the following or_where()/and_where()/or_not_where() etc. " <>
+      "E.g. new() |> match() |> node(:n) |> where(:n, \"age\", :bigger, 20) |> and_where(:n, \"name\", :contains, \"A\") |> return(:n) |> ..."
+    end
+
+    test "build query that would giver error because order of logical operators in where clause is wrong again." do
+      {:error, query} =
+        Query.new()
+        |> Query.match()
+        |> Query.node(:n)
+        |> Query.where(:n, "age", :bigger, 5)
+        |> Query.where(:n, "age", :bigger, 5)
+        |> Query.return(:n)
+        |> Query.build_query()
+
+      assert query == "Provided order of WHERE clauses is wrong. You first call either where() or where_not() and then any number of the following or_where()/and_where()/or_not_where() etc. " <>
+      "E.g. new() |> match() |> node(:n) |> where(:n, \"age\", :bigger, 20) |> and_where(:n, \"name\", :contains, \"A\") |> return(:n) |> ..."
+    end
+
+    test "build query that would giver error because node alias wasn't provided before." do
+      {:error, query} =
+        Query.new()
+        |> Query.match()
+        |> Query.node(:n)
+        |> Query.where(:m, "age", :bigger, 5)
+        |> Query.return(:n)
+        |> Query.build_query()
+
+      assert query == "Provided alias: :m was not mentioned before. Pass the alias first: e.g. new() |> match() |> node(:n) |> order_by_property(:n, \"age\") |> ..."
+    end
+
+    test "build query that would giver error because property name wasn't provided." do
+      {:error, query} =
+        Query.new()
+        |> Query.match()
+        |> Query.node(:n)
+        |> Query.where(:n, "", :bigger, 5)
+        |> Query.return(:n)
+        |> Query.build_query()
+
+      assert query == "Provide property name. E.g. new() |> match() |> node(:n) |> where(:n, \"age\", :bigger, 20}) |> return(:n) |> ..."
+    end
+
+    test "build query that would giver error because unsupported operator was provided." do
+      {:error, query} =
+        Query.new()
+        |> Query.match()
+        |> Query.node(:n)
+        |> Query.where(:n, "age", :test, 5)
+        |> Query.return(:n)
+        |> Query.build_query()
+
+      assert query == "Provided value: \"5\" or/and operator: :test in the WHERE clause is not supported."
+    end
+
+    test "build query that would giver error because wrong operator was for the given value provided." do
+      {:error, query} =
+        Query.new()
+        |> Query.match()
+        |> Query.node(:n)
+        |> Query.where(:n, "age", :in, 5)
+        |> Query.return(:n)
+        |> Query.build_query()
+
+      assert query == "Provided value: \"5\" or/and operator: :in in the WHERE clause is not supported."
+    end
+
+    test "build query that would giver error because wrong value is empty string." do
+      {:error, query} =
+        Query.new()
+        |> Query.match()
+        |> Query.node(:n)
+        |> Query.where(:n, "age", :in, "")
+        |> Query.return(:n)
+        |> Query.build_query()
+
+      assert query == "Value can't be of empty string. E.g. new() |> match() |> node(:n) |> where({:n, \"age\", :contains, \"A\") |> return(:n) |> ..."
+    end
   end
 
   describe "ORDER BY clause:" do
@@ -512,6 +911,42 @@ defmodule RedisGraph.QueryTest do
 
       assert query == "MATCH (n) ORDER BY n.age ASC, n.name DESC RETURN n"
     end
+
+    test "build query that would give error because provided alias is not metioned before." do
+      {:error, query} =
+        Query.new()
+        |> Query.match()
+        |> Query.node(:n)
+        |> Query.return(:n)
+        |> Query.order_by(:m, "age")
+        |> Query.build_query()
+
+      assert query == "Provided alias: :m was not mentioned before. Pass the alias first: e.g. new() |> match() |> node(:n) |> order_by_property(:n, \"age\") |> ..."
+    end
+
+    test "build query that would give error because node property is of incorrect type." do
+      {:error, query} =
+        Query.new()
+        |> Query.match()
+        |> Query.node(:n)
+        |> Query.return(:n)
+        |> Query.order_by(:n, 5)
+        |> Query.build_query()
+
+      assert query == "Provide property name as string. E.g. new() |> match() |> node(:n) |> order_by(:n, \"age\") |> return(:n) |> ..."
+    end
+
+    test "build query that would give error because node property is empty string." do
+      {:error, query} =
+        Query.new()
+        |> Query.match()
+        |> Query.node(:n)
+        |> Query.return(:n)
+        |> Query.order_by(:n, "")
+        |> Query.build_query()
+
+      assert query == "Provide property name. E.g. new() |> match() |> node(:n) |> order_by(:n, \"age\") |> return(:n) |> ..."
+    end
   end
 
   describe "LIMIT clause:" do
@@ -525,6 +960,15 @@ defmodule RedisGraph.QueryTest do
         |> Query.build_query()
 
       assert query == "MATCH (n) RETURN n LIMIT 10"
+    end
+
+    test "build query that would give error because match clause is not provided." do
+      {:error, query} =
+        Query.new()
+        |> Query.limit(10)
+        |> Query.build_query()
+
+      assert query == "MATCH or OPTIONAL MATCH or CREATE or MERGE clause has to be provided first before using LIMIT. E.g. new() |> match() |> node(:n) |> ..."
     end
   end
 
@@ -540,6 +984,15 @@ defmodule RedisGraph.QueryTest do
 
       assert query == "MATCH (n) RETURN n SKIP 10"
     end
+
+    test "build query that would give error because match clause is not provided." do
+      {:error, query} =
+        Query.new()
+        |> Query.skip(10)
+        |> Query.build_query()
+
+      assert query == "MATCH or OPTIONAL MATCH or CREATE or MERGE clause has to be provided first before using SKIP. E.g. new() |> match() |> node(:n) |> ..."
+    end
   end
 
   describe "WITH clause:" do
@@ -553,6 +1006,18 @@ defmodule RedisGraph.QueryTest do
         |> Query.build_query()
 
       assert query == "MATCH (n) WITH n AS person RETURN person"
+    end
+
+    test "build query that would match on a node n with * and return it through the alias person." do
+      {:ok, query} =
+        Query.new()
+        |> Query.match()
+        |> Query.node(:n)
+        |> Query.with(:*)
+        |> Query.return(:n)
+        |> Query.build_query()
+
+      assert query == "MATCH (n) WITH * RETURN n"
     end
 
     test "build query that would match on a node n with property age alias as personAge and return it through the alias personAge." do
@@ -605,6 +1070,55 @@ defmodule RedisGraph.QueryTest do
 
       assert query == "MATCH (n),(m) WITH toUpper(n.name) AS Name, m RETURN Name, m"
     end
+
+    test "build query that would give error because specified functions is empty string." do
+      {:error, query} =
+        Query.new()
+        |> Query.match()
+        |> Query.node(:m)
+        |> Query.with_function("", :n, :Labels)
+        |> Query.return(:Labels)
+        |> Query.build_query()
+
+      assert query == "Provide function name. E.g. new() |> match() |> node(:n) |> with(\"toUpper\", :n, \"name\", \"Name\") |> return(\"Name\") |>..."
+    end
+
+    test "build query that would give error because specified property is empty string." do
+      {:error, query} =
+        Query.new()
+        |> Query.match()
+        |> Query.node(:m)
+        |> Query.with_property(:n, "")
+        |> Query.return(:n)
+        |> Query.build_query()
+
+      assert query == "Provide property name. E.g. new() |> match() |> node(:n) |> with(\"toUpper\", :n, \"name\", \"Name\") |> return(\"Name\") |> ..."
+    end
+
+     test "build query that would give error because specified alias is not present." do
+      {:error, query} =
+        Query.new()
+        |> Query.match()
+        |> Query.node(:m)
+        |> Query.with_function("labels", :n, :Labels)
+        |> Query.return(:Labels)
+        |> Query.build_query()
+
+      assert query == "Provided alias: :n was not mentioned before. Pass the alias first: e.g. new() |> match() |> node(:n) |> with(:n, \"Node\") |> |> return(:n) ..."
+    end
+
+    test "build query that would give error because specified alias in return is not present." do
+      {:error, query} =
+        Query.new()
+        |> Query.match()
+        |> Query.node(:m)
+        |> Query.with_function("labels", :m, :Labels)
+        |> Query.return(:LABELS)
+        |> Query.build_query()
+
+      assert query == "Provided alias: :LABELS was not mentioned before. Pass the alias first: e.g. new() |> match() |> node(:n) |> order_by_property(:n, \"age\") |> ..."
+    end
+
   end
 
   describe "SET clause:" do
@@ -695,6 +1209,66 @@ defmodule RedisGraph.QueryTest do
 
       assert query == "MATCH (n),(m) SET n = m, m.stuff = ['Hi', 55, null, false] RETURN n, m"
     end
+
+    test "build query that would give error because node m was not provided before." do
+      {:error, query} =
+        Query.new()
+        |> Query.match()
+        |> Query.node(:n)
+        |> Query.set_property(:m, "age", 5)
+        |> Query.return(:n)
+        |> Query.build_query()
+
+      assert query == "Provided alias: :m was not mentioned before. Pass the alias first: e.g. new() |> match() |> node(:n) |> order_by_property(:n, \"age\") |> ..."
+    end
+
+    test "build query that would give error because property name is not provided." do
+      {:error, query} =
+        Query.new()
+        |> Query.match()
+        |> Query.node(:n)
+        |> Query.set_property(:n, "", 5)
+        |> Query.return(:n)
+        |> Query.build_query()
+
+      assert query == "Provide property name. E.g. new() |> match() |> node(:n) |> set_property(:n, \"name\", \"Name\") |> return(:n) |> ..."
+    end
+
+    test "build query that would give error node n is set to node m which is not provided before." do
+      {:error, query} =
+        Query.new()
+        |> Query.match()
+        |> Query.node(:n)
+        |> Query.set(:n, :m)
+        |> Query.return(:n)
+        |> Query.build_query()
+
+      assert query == "Provided alias: :m was not mentioned before. Pass the alias first: e.g. new() |> match() |> node(:n) |> order_by_property(:n, \"age\") |> ..."
+    end
+
+    test "build query that would give error as node n is set based on merge instead of match." do
+      {:error, query} =
+        Query.new()
+        |> Query.merge()
+        |> Query.node(:n)
+        |> Query.set(:n, %{age: 5})
+        |> Query.return(:n)
+        |> Query.build_query()
+
+      assert query == "MATCH or OPTIONAL MATCH or CREATE clause has to be provided first before using SET. E.g. new() |> match() |> node(:n) |> ..."
+    end
+
+    test "build query that would give error as node n is set with wrong operator." do
+      {:error, query} =
+        Query.new()
+        |> Query.match()
+        |> Query.node(:n)
+        |> Query.set(:n, %{age: 5}, "==")
+        |> Query.return(:n)
+        |> Query.build_query()
+
+      assert query == "Provided operator \"==\" is not supported. Only := (default) or :+= is supported. E.g. new() |> match() |> node(:n) |> node(:n) |> set_property(:n, \"age\", 100, :+=) |> ..."
+    end
   end
 
   describe "ON MATCH SET clause:" do
@@ -737,6 +1311,66 @@ defmodule RedisGraph.QueryTest do
         |> Query.build_query()
 
       assert query == "MERGE (n:Person {age: 5, name: 'Mike', works: false})-[r:KNOWS]->(m:Person:Student) ON MATCH SET n += {age: 50, hobbies: ['sports', 'cooking', 'reading'], name: 'Michael', works: true}, r = {duration: 5} RETURN n, r, m"
+    end
+
+    test "build query that would give error because node m was not provided before." do
+      {:error, query} =
+        Query.new()
+        |> Query.merge()
+        |> Query.node(:n)
+        |> Query.on_match_set_property(:m, "age", 5)
+        |> Query.return(:n)
+        |> Query.build_query()
+
+      assert query == "Provided alias: :m was not mentioned before. Pass the alias first: e.g. new() |> match() |> node(:n) |> order_by_property(:n, \"age\") |> ..."
+    end
+
+    test "build query that would give error because property name is not provided." do
+      {:error, query} =
+        Query.new()
+        |> Query.merge()
+        |> Query.node(:n)
+        |> Query.on_match_set_property(:n, "", 5)
+        |> Query.return(:n)
+        |> Query.build_query()
+
+      assert query == "Provide property name. E.g. new() |> match() |> node(:n) |> set_property(:n, \"name\", \"Name\") |> return(:n) |> ..."
+    end
+
+    test "build query that would give error node n is set to node m which is not provided before." do
+      {:error, query} =
+        Query.new()
+        |> Query.merge()
+        |> Query.node(:n)
+        |> Query.on_match_set(:n, :m)
+        |> Query.return(:n)
+        |> Query.build_query()
+
+      assert query == "Provided alias: :m was not mentioned before. Pass the alias first: e.g. new() |> match() |> node(:n) |> order_by_property(:n, \"age\") |> ..."
+    end
+
+    test "build query that would give error as node n is set with match instead of merge." do
+      {:error, query} =
+        Query.new()
+        |> Query.match()
+        |> Query.node(:n)
+        |> Query.on_match_set(:n, %{age: 5})
+        |> Query.return(:n)
+        |> Query.build_query()
+
+      assert query == "MERGE clause has to be provided first before using SET. E.g. new() |> merge() |> node(:n) |> node(:m) |> on_create_set(:n, \"m\") |> return(:n) |> ..."
+    end
+
+    test "build query that would give error as node n is set with wrong operator." do
+      {:error, query} =
+        Query.new()
+        |> Query.merge()
+        |> Query.node(:n)
+        |> Query.on_match_set(:n, %{age: 5}, "==")
+        |> Query.return(:n)
+        |> Query.build_query()
+
+      assert query == "Provided operator \"==\" is not supported. Only := (default) or :+= is supported. E.g. new() |> match() |> node(:n) |> node(:n) |> set_property(:n, \"age\", 100, :+=) |> ..."
     end
   end
 
@@ -799,6 +1433,66 @@ defmodule RedisGraph.QueryTest do
 
       assert query == "MERGE (n:Person {age: 5, name: 'Mike', works: false})-[r:KNOWS]->(m:Person:Student {name: 'Bob'}) ON CREATE SET n += {age: 50, hobbies: ['sports', 'cooking', 'reading'], name: 'Michael', works: true}, r.duration = 5 ON MATCH SET m.age = 25 RETURN n, r, m"
     end
+
+    test "build query that would give error because node m was not provided before." do
+      {:error, query} =
+        Query.new()
+        |> Query.merge()
+        |> Query.node(:n)
+        |> Query.on_create_set_property(:m, "age", 5)
+        |> Query.return(:n)
+        |> Query.build_query()
+
+      assert query == "Provided alias: :m was not mentioned before. Pass the alias first: e.g. new() |> match() |> node(:n) |> order_by_property(:n, \"age\") |> ..."
+    end
+
+    test "build query that would give error because property name is not provided." do
+      {:error, query} =
+        Query.new()
+        |> Query.merge()
+        |> Query.node(:n)
+        |> Query.on_create_set_property(:n, "", 5)
+        |> Query.return(:n)
+        |> Query.build_query()
+
+      assert query == "Provide property name. E.g. new() |> match() |> node(:n) |> set_property(:n, \"name\", \"Name\") |> return(:n) |> ..."
+    end
+
+    test "build query that would give error node n is set to node m which is not provided before." do
+      {:error, query} =
+        Query.new()
+        |> Query.merge()
+        |> Query.node(:n)
+        |> Query.on_create_set(:n, :m)
+        |> Query.return(:n)
+        |> Query.build_query()
+
+      assert query == "Provided alias: :m was not mentioned before. Pass the alias first: e.g. new() |> match() |> node(:n) |> order_by_property(:n, \"age\") |> ..."
+    end
+
+    test "build query that would give error as node n is set with match instead of merge." do
+      {:error, query} =
+        Query.new()
+        |> Query.match()
+        |> Query.node(:n)
+        |> Query.on_create_set(:n, %{age: 5})
+        |> Query.return(:n)
+        |> Query.build_query()
+
+      assert query == "MERGE clause has to be provided first before using SET. E.g. new() |> merge() |> node(:n) |> node(:m) |> on_create_set(:n, \"m\") |> return(:n) |> ..."
+    end
+
+    test "build query that would give error as node n is set with wrong operator." do
+      {:error, query} =
+        Query.new()
+        |> Query.merge()
+        |> Query.node(:n)
+        |> Query.on_create_set(:n, %{age: 5}, "==")
+        |> Query.return(:n)
+        |> Query.build_query()
+
+      assert query == "Provided operator \"==\" is not supported. Only := (default) or :+= is supported. E.g. new() |> match() |> node(:n) |> node(:n) |> set_property(:n, \"age\", 100, :+=) |> ..."
+    end
   end
 
   describe "DELETE clause:" do
@@ -839,6 +1533,25 @@ defmodule RedisGraph.QueryTest do
         |> Query.build_query()
 
       assert query == "MATCH (n)-[r]->(m),(b:Person) DELETE r, b"
+    end
+
+    test "build query that would give error because node m was not provided." do
+      {:error, query} =
+        Query.new()
+        |> Query.match()
+        |> Query.node(:n)
+        |> Query.delete(:m)
+        |> Query.build_query()
+
+      assert query == "Provided alias: :m was not mentioned before. Pass the alias first: e.g. new() |> match() |> node(:n) |> order_by_property(:n, \"age\") |> ..."
+    end
+
+    test "build query that would give error because context was not provided with new()" do
+      {:error, query} =
+        Query.delete(%{error: nil}, :m)
+        |> Query.build_query()
+
+      assert query == "Please instantiate the query first with new(). Istead have e.g. new() |> match |> node(:n) |> return(:n) ..."
     end
   end
 
@@ -894,6 +1607,56 @@ defmodule RedisGraph.QueryTest do
 
       assert query == "MATCH (n)-[r]->(m) RETURN n.age AS Age, type(r) AS Type, toUpper(m.name) AS Name"
     end
+
+    test "build query that would give error because provided alias is not present." do
+      {:error, query} =
+        Query.new()
+        |> Query.match()
+        |> Query.node(:n)
+        |> Query.return(:m)
+        |> Query.build_query()
+
+      assert query == "Provided alias: :m was not mentioned before. Pass the alias first: e.g. new() |> match() |> node(:n) |> order_by_property(:n, \"age\") |> ..."
+    end
+
+    test "build query that would give error because necessary clause for not provided first." do
+      {:error, query} =
+        Query.return(%{error: nil}, :m)
+        |> Query.build_query()
+
+      assert query == "One of these clauses MATCH, CREATE, MERGE etc. has to be provided first before using RETURN. E.g. new() |> match() |> node(:n) |> return(:n)  |> ..."
+    end
+
+    test "build query that would give error because context is not provided through new() function context was not provided through new() function test." do
+      {:error, query} =
+        Query.match(%{error: nil})
+        |> Query.return(:m)
+        |> Query.build_query()
+
+      assert query == "Please instantiate the query first with new(). Istead have e.g. new() |> match |> node(:n) |> return(:n) ..."
+    end
+
+    test "build query that would give error because property name is not provided." do
+      {:error, query} =
+        Query.new()
+        |> Query.match()
+        |> Query.node(:n)
+        |> Query.return_property(:n, "")
+        |> Query.build_query()
+
+      assert query == "Provide property name. E.g. new() |> match() |> node(:n) |> return(\"toUpper\", :n, \"age\") |> ..."
+    end
+
+    test "build query that would give error because function name is not provided." do
+      {:error, query} =
+        Query.new()
+        |> Query.match()
+        |> Query.node(:n)
+        |> Query.return_function("", :n, "name")
+        |> Query.build_query()
+
+      assert query == "Provide function name. E.g. new() |> match() |> node(:n) |> return(\"toUpper\", :n, \"age\") |> ..."
+    end
   end
 
   describe "RETURN DISTINCT clause:" do
@@ -907,7 +1670,6 @@ defmodule RedisGraph.QueryTest do
 
       assert query == "MATCH (n) RETURN DISTINCT n"
     end
-
 
     test "build query that would match on a node n, relationship r and node m, and return distinct n with property age, r with function type and node m function on property name." do
       {:ok, query} =
@@ -937,6 +1699,26 @@ defmodule RedisGraph.QueryTest do
         |> Query.build_query()
 
       assert query == "MATCH (n)-[r]->(m) RETURN DISTINCT n.age AS Age, type(r) AS Type, toUpper(m.name) AS Name"
+    end
+
+    test "build query that would give error because provided alias is not present." do
+      {:error, query} =
+        Query.new()
+        |> Query.match()
+        |> Query.node(:n)
+        |> Query.return_distinct(:m)
+        |> Query.build_query()
+
+      assert query == "Provided alias: :m was not mentioned before. Pass the alias first: e.g. new() |> match() |> node(:n) |> order_by_property(:n, \"age\") |> ..."
+    end
+
+    test "build query that would give error context was not provided through new() function." do
+      {:error, query} =
+        Query.match(%{error: nil})
+        |> Query.return_distinct(:m)
+        |> Query.build_query()
+
+      assert query == "Please instantiate the query first with new(). Istead have e.g. new() |> match |> node(:n) |> return(:n) ..."
     end
   end
 end
