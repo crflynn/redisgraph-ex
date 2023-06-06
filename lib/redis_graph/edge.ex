@@ -6,7 +6,7 @@ defmodule RedisGraph.Edge do
   between two entities in a Graph. The nodes must exist in the Graph in order
   for the edge to be added.
 
-  Edges must have a relation which identifies the type of relationship being
+  Edges must have a type which identifies the type of relationship being
   described between entities
 
   Edges, like Nodes, may also have properties, a map of values which describe
@@ -18,12 +18,12 @@ defmodule RedisGraph.Edge do
           id: integer(),
           src_node: Node.t() | number(),
           dest_node: Node.t() | number(),
-          relation: String.t(),
+          type: String.t(),
           properties: %{optional(String.t()) => any()}
         }
 
-  @enforce_keys [:src_node, :dest_node, :relation]
-  defstruct [:id, :alias, :src_node, :dest_node, :relation, properties: %{}]
+  @enforce_keys [:src_node, :dest_node, :type]
+  defstruct [:id, :alias, :src_node, :dest_node, :type, properties: %{}]
 
   @doc """
   Create a new Edge from a map.
@@ -32,10 +32,15 @@ defmodule RedisGraph.Edge do
 
       edge = Edge.new(%{
         src_node: john,
-        dest_node: japan,
-        relation: "visited"
+        dest_node: bob,
+        type: "friend"
       })
   """
+
+  def new() do
+    new(%{})
+  end
+
   @spec new(map()) :: t()
   def new(map) do
     edge = struct(__MODULE__, map)
@@ -71,7 +76,7 @@ defmodule RedisGraph.Edge do
     src_node_string = "(" <> edge.src_node.alias <> ")"
 
     edge_string =
-      case edge.relation do
+      case edge.type do
         "" -> "-[" <> properties_to_string(edge) <> "]->"
         nil -> "-[" <> properties_to_string(edge) <> "]->"
         other -> "-[:" <> other <> properties_to_string(edge) <> "]->"
@@ -90,7 +95,7 @@ defmodule RedisGraph.Edge do
   * If the ids differ, returns ``false``
   * If the source nodes differ, returns ``false``
   * If the destination nodes differ, returns ``false``
-  * If the relations differ, returns ``false``
+  * If the types differ, returns ``false``
   * If the properties differ, returns ``false``
   * Otherwise returns `true`
   """
@@ -100,7 +105,7 @@ defmodule RedisGraph.Edge do
       left.id != right.id -> false
       left.src_node != right.src_node -> false
       left.dest_node != right.dest_node -> false
-      left.relation != right.relation -> false
+      left.type != right.type -> false
       map_size(left.properties) != map_size(right.properties) -> false
       not Map.equal?(left.properties, right.properties) -> false
       true -> true

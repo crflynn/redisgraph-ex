@@ -16,18 +16,10 @@ defmodule RedisGraph.Graph do
   alias RedisGraph.Edge
   alias RedisGraph.Node
 
-  @type t() :: %__MODULE__{
-          name: String.t(),
-          nodes: %{optional(String.t()) => Node.t()},
-          edges: list(Edge.t())
-        }
+  @type t() :: %__MODULE__{name: String.t()}
 
   @enforce_keys [:name]
-  defstruct [
-    :name,
-    nodes: %{},
-    edges: []
-  ]
+  defstruct [:name]
 
   @doc """
   Create a graph from a map.
@@ -83,39 +75,7 @@ defmodule RedisGraph.Graph do
   ```
   """
   @spec new(map()) :: t()
-  def new(map) do
-    struct(__MODULE__, map)
-  end
-
-  @doc """
-  Add a `RedisGraph.Node` to a graph.
-
-  Creates a random string alias for the Node
-  if the Node has no alias.
-  """
-  @spec add_node(t(), Node.t()) :: {t(), Node.t()}
-  def add_node(graph, node) do
-    node = Node.set_alias_if_nil(node)
-    {%{graph | nodes: Map.put(graph.nodes, node.alias, node)}, node}
-  end
-
-  @doc """
-  Add a `RedisGraph.Edge` to a graph.
-
-  If the source node or destination node are not part of the
-  graph, then the edge cannot be added. Uses node aliases
-  to check graph membership.
-  """
-  @spec add_edge(t(), Edge.t()) :: {:ok, t()} | {:error, any()}
-  def add_edge(graph, edge) do
-    cond do
-      not node_in_graph?(graph, edge.src_node) -> {:error, "source node not in graph"}
-      not node_in_graph?(graph, edge.dest_node) -> {:error, "destination node not in graph"}
-      true -> {:ok, %{graph | edges: graph.edges ++ [edge]}}
-    end
-  end
-
-  defp node_in_graph?(graph, node) do
-    Map.has_key?(graph.nodes, node.alias)
+  def new(graph_name) do
+    struct(__MODULE__, graph_name)
   end
 end

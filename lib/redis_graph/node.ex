@@ -24,9 +24,9 @@ defmodule RedisGraph.Node do
 
   @type t() :: %__MODULE__{
           id: integer(),
-          alias: String.t(),
-          labels: List.t(),
-          properties: %{optional(String.t()) => any()}
+          alias: atom(),
+          labels: [String.t()],
+          properties: %{}
         }
 
   defstruct [:id, :alias, labels: [], properties: %{}]
@@ -36,16 +36,21 @@ defmodule RedisGraph.Node do
 
   ## Example
 
-      john = Node.new(%{
+      bob = Node.new(%{
         labels: ["person"],
         properties: %{
-          name: "John Doe",
-          age: 33
+          name: "Bob Thomsen",
+          age: 22
         }
       })
   """
+
+  def new() do
+    new(%{})
+  end
+
   @spec new(map()) :: t()
-  def new(map) do
+  def new(map) when is_map(map) do
     node = struct(__MODULE__, map)
     if(is_nil(node.alias), do: set_alias_if_nil(node), else: node)
   end
