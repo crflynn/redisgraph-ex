@@ -9,9 +9,9 @@ defmodule RedisGraph.MixProject do
     [
       app: :redisgraph,
       version: @version,
-      elixir: "~> 1.9",
+      elixir: "~> 1.14",
       start_permanent: Mix.env() == :prod,
-      test_coverage: [tool: ExCoveralls],
+      # test_coverage: [tool: CoverModule],
       aliases: aliases(),
       deps: deps(),
       # hex
@@ -35,8 +35,9 @@ defmodule RedisGraph.MixProject do
       extra_applications: [:logger]
     ]
   end
-  #GRAPH.QUERY test MATCH (p:person)-[v:visited]->(c:country) RETURN p
-  #["GRAPH.EXPLAIN", "test", "(p:person)-[v:visited]->(c:country) RETURN p"]
+
+  # GRAPH.QUERY test MATCH (p:person)-[v:visited]->(c:country) RETURN p
+  # ["GRAPH.EXPLAIN", "test", "(p:person)-[v:visited]->(c:country) RETURN p"]
   defp package do
     [
       maintainers: ["Christopher Flynn"],
@@ -61,14 +62,15 @@ defmodule RedisGraph.MixProject do
   defp deps do
     [
       {:redix, "~> 1.1"},
-    {:castore, ">= 0.0.0"},
+      {:castore, ">= 0.0.0"},
 
       # dev
       {:ex_doc, "~> 0.27", only: :dev, runtime: false},
       {:dialyxir, "~> 1.3", only: [:dev], runtime: false},
 
       # test
-      {:excoveralls, "~> 0.10", only: :test}
+      {:excoveralls, "~> 0.16.1", only: :test},
+      {:credo, "~> 1.7"}
     ]
   end
 end
