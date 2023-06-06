@@ -65,9 +65,10 @@ defmodule RedisGraph.QueryResult do
   @column_type %{
     COLUMN_UNKNOWN: 0,
     COLUMN_SCALAR: 1,
-    COLUMN_NODE: 2,      # Unused, retained for client compatibility.
-    COLUMN_RELATION: 3,  # Unused, retained for client compatibility.
-
+    # Unused, retained for client compatibility.
+    COLUMN_NODE: 2,
+    # Unused, retained for client compatibility.
+    COLUMN_RELATION: 3
   }
 
   @value_type %{
@@ -223,7 +224,11 @@ defmodule RedisGraph.QueryResult do
       {:ok, result} ->
         [_columns_array, records_array, _metadata_array] = result
         # e.g. of records_array -- [ [[_value_type, element]], [[_value_type, element]] ]
-        Enum.with_index(records_array, fn [[_value_type, element] | _ ], index -> {index, element} end) |> Enum.into(%{})
+        Enum.with_index(records_array, fn [[_value_type, element] | _], index ->
+          {index, element}
+        end)
+        |> Enum.into(%{})
+
       {:error, reason} ->
         raise reason
     end
@@ -283,7 +288,6 @@ defmodule RedisGraph.QueryResult do
   end
 
   def extract_node_value(query_result, value) do
-
   end
 
   # https://oss.redislabs.com/redisgraph/client_spec/
@@ -303,15 +307,33 @@ defmodule RedisGraph.QueryResult do
     IO.puts("parse_cell > cell")
     IO.inspect(cell)
     [value_type | [value]] = cell
-    res = cond do
-      value_type == @value_type[:VALUE_NODE] -> parse_node(query_result, value)
-      value_type == @value_type[:VALUE_EDGE] -> parse_edge(query_result, value)
-      value_type == @value_type[:VALUE_NULL] || value_type == @value_type[:VALUE_INTEGER] || value_type == @value_type[:VALUE_STRING] -> value
-      value_type == @value_type[:VALUE_BOOLEAN] -> if(value == "true", do: true, else: false)
-      value_type == @value_type[:VALUE_DOUBLE] -> String.to_float(value)
-      value_type == @value_type[:VALUE_ARRAY] || value_type == @value_type[:VALUE_PATH] || value_type == @value_type[:VALUE_MAP] || value_type == @value_type[:VALUE_POINT] -> "will be implemented in future"
-      true -> "unknown value type"
-    end
+
+    res =
+      cond do
+        value_type == @value_type[:VALUE_NODE] ->
+          parse_node(query_result, value)
+
+        value_type == @value_type[:VALUE_EDGE] ->
+          parse_edge(query_result, value)
+
+        value_type == @value_type[:VALUE_NULL] || value_type == @value_type[:VALUE_INTEGER] ||
+            value_type == @value_type[:VALUE_STRING] ->
+          value
+
+        value_type == @value_type[:VALUE_BOOLEAN] ->
+          if(value == "true", do: true, else: false)
+
+        value_type == @value_type[:VALUE_DOUBLE] ->
+          String.to_float(value)
+
+        value_type == @value_type[:VALUE_ARRAY] || value_type == @value_type[:VALUE_PATH] ||
+          value_type == @value_type[:VALUE_MAP] || value_type == @value_type[:VALUE_POINT] ->
+          "will be implemented in future"
+
+        true ->
+          "unknown value type"
+      end
+
     IO.puts("parse_cell > res")
     IO.inspect(res)
   end
@@ -367,7 +389,12 @@ defmodule RedisGraph.QueryResult do
   defp parse_entity_properties(query_result, properties) do
     IO.puts("parse_entity_properties")
     IO.inspect(properties)
-    Enum.map(properties, fn [property_id | cell] -> {:"#{Map.get(query_result.property_keys, property_id)}", parse_cell(query_result, cell)} end) |> Enum.into(%{})
+
+    Enum.map(properties, fn [property_id | cell] ->
+      {:"#{Map.get(query_result.property_keys, property_id)}", parse_cell(query_result, cell)}
+    end)
+    |> Enum.into(%{})
+
     # properties
     # |> Enum.at(0)
     # |> Enum.map(fn [property_key_index | value] ->
