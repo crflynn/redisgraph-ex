@@ -1,6 +1,5 @@
 defmodule RedisGraph.QueryBuilder do
-
-  alias RedisGraph.{Node, Edge, Util, Query}
+  alias RedisGraph.{Node, Relationship, Util, Query}
 
   @spec build_query(Query.t()) :: {:ok, String.t()} | {:error, String.t()}
   def build_query(%{error: nil} = context) do
@@ -25,7 +24,6 @@ defmodule RedisGraph.QueryBuilder do
           :skip -> build_query_for_skip_clause(context, elements)
           :return -> build_query_for_return_clause(context, clause, elements)
           :return_distinct -> build_query_for_return_clause(context, clause, elements)
-          # add error in context and call build_query()?
           _ -> "!!!Provided clause -- #{clause} is not yet supported!!!"
         end
       end)
@@ -45,7 +43,7 @@ defmodule RedisGraph.QueryBuilder do
       Enum.reduce(elements, {nil, ""}, fn element_alias, acc ->
         {last_element, query} = acc
         node = Map.get(context, :nodes, %{}) |> Map.get(element_alias, nil)
-        edge = Map.get(context, :edges, %{}) |> Map.get(element_alias, nil)
+        relationship = Map.get(context, :relationships, %{}) |> Map.get(element_alias, nil)
 
         cond do
           is_struct(node, Node) and is_struct(last_element, Node) ->
@@ -53,7 +51,7 @@ defmodule RedisGraph.QueryBuilder do
 
             query =
               query <>
-                ",(#{Util.converted_value(node.alias)}#{Util.labels_to_string(node.labels)}#{Util.properties_to_string(node.properties)})"
+                ",(#{Util.value_to_string(node.alias)}#{Util.labels_to_string(node.labels)}#{Util.properties_to_string(node.properties)})"
 
             {last_element, query}
 
@@ -62,27 +60,27 @@ defmodule RedisGraph.QueryBuilder do
 
             query =
               query <>
-                "(#{Util.converted_value(node.alias)}#{Util.labels_to_string(node.labels)}#{Util.properties_to_string(node.properties)})"
+                "(#{Util.value_to_string(node.alias)}#{Util.labels_to_string(node.labels)}#{Util.properties_to_string(node.properties)})"
 
             {last_element, query}
 
-          is_struct(edge, Edge) and is_struct(last_element, Node) and
-              edge.src_node.alias == last_element.alias ->
-            last_element = edge
+          is_struct(relationship, Relationship) and is_struct(last_element, Node) and
+              relationship.src_node.alias == last_element.alias ->
+            last_element = relationship
 
             query =
               query <>
-                "-[#{Util.converted_value(edge.alias)}#{Util.type_to_string(edge.type)}#{Util.properties_to_string(edge.properties)}]->"
+                "-[#{Util.value_to_string(relationship.alias)}#{Util.type_to_string(relationship.type)}#{Util.properties_to_string(relationship.properties)}]->"
 
             {last_element, query}
 
-          is_struct(edge, Edge) and is_struct(last_element, Node) and
-              edge.dest_node.alias == last_element.alias ->
-            last_element = edge
+          is_struct(relationship, Relationship) and is_struct(last_element, Node) and
+              relationship.dest_node.alias == last_element.alias ->
+            last_element = relationship
 
             query =
               query <>
-                "<-[#{Util.converted_value(edge.alias)}#{Util.type_to_string(edge.type)}#{Util.properties_to_string(edge.properties)}]-"
+                "<-[#{Util.value_to_string(relationship.alias)}#{Util.type_to_string(relationship.type)}#{Util.properties_to_string(relationship.properties)}]-"
 
             {last_element, query}
 
@@ -116,7 +114,7 @@ defmodule RedisGraph.QueryBuilder do
             %{alias: alias, property: property, operator: operator, value: value} =
               element_per_logical_operator
 
-            "#{logical_operator_to_string}#{Util.converted_value(alias)}.#{property} #{operator} #{Util.converted_value(value)}"
+            "#{logical_operator_to_string}#{Util.value_to_string(alias)}.#{property} #{operator} #{Util.value_to_string(value)}"
           end)
 
         Enum.join(inner_query_list, " ")
@@ -135,28 +133,28 @@ defmodule RedisGraph.QueryBuilder do
 
         cond do
           not is_nil(alias) and not is_nil(property) and not is_nil(function) and not is_nil(as) ->
-            "#{function}(#{Util.converted_value(alias)}.#{property}) AS #{as}"
+            "#{function}(#{Util.value_to_string(alias)}.#{property}) AS #{as}"
 
           not is_nil(alias) and not is_nil(property) and not is_nil(function) ->
-            "#{function}(#{Util.converted_value(alias)}.#{property})"
+            "#{function}(#{Util.value_to_string(alias)}.#{property})"
 
           not is_nil(alias) and not is_nil(function) and not is_nil(as) ->
-            "#{function}(#{Util.converted_value(alias)}) AS #{as}"
+            "#{function}(#{Util.value_to_string(alias)}) AS #{as}"
 
           not is_nil(alias) and not is_nil(function) ->
-            "#{function}(#{Util.converted_value(alias)})"
+            "#{function}(#{Util.value_to_string(alias)})"
 
           not is_nil(alias) and not is_nil(property) and not is_nil(as) ->
-            "#{Util.converted_value(alias)}.#{property} AS #{as}"
+            "#{Util.value_to_string(alias)}.#{property} AS #{as}"
 
           not is_nil(alias) and not is_nil(property) ->
-            "#{Util.converted_value(alias)}.#{property}"
+            "#{Util.value_to_string(alias)}.#{property}"
 
           not is_nil(alias) and not is_nil(as) ->
-            "#{Util.converted_value(alias)} AS #{as}"
+            "#{Util.value_to_string(alias)} AS #{as}"
 
           not is_nil(alias) ->
-            "#{Util.converted_value(alias)}"
+            "#{Util.value_to_string(alias)}"
 
           true ->
             "Wrong parameters provided to return function"
@@ -172,7 +170,7 @@ defmodule RedisGraph.QueryBuilder do
     query_list =
       Stream.map(elements, fn element ->
         %{property: property, alias: alias, order: order} = element
-        "#{Util.converted_value(alias)}.#{property} #{order}"
+        "#{Util.value_to_string(alias)}.#{property} #{order}"
       end)
 
     query_list_joined = Enum.join(query_list, ", ")
@@ -187,28 +185,28 @@ defmodule RedisGraph.QueryBuilder do
 
         cond do
           not is_nil(alias) and not is_nil(property) and not is_nil(function) and not is_nil(as) ->
-            "#{function}(#{Util.converted_value(alias)}.#{property}) AS #{as}"
+            "#{function}(#{Util.value_to_string(alias)}.#{property}) AS #{as}"
 
           not is_nil(alias) and not is_nil(property) and not is_nil(function) ->
-            "#{function}(#{Util.converted_value(alias)}.#{property})"
+            "#{function}(#{Util.value_to_string(alias)}.#{property})"
 
           not is_nil(alias) and not is_nil(function) and not is_nil(as) ->
-            "#{function}(#{Util.converted_value(alias)}) AS #{as}"
+            "#{function}(#{Util.value_to_string(alias)}) AS #{as}"
 
           not is_nil(alias) and not is_nil(function) ->
-            "#{function}(#{Util.converted_value(alias)})"
+            "#{function}(#{Util.value_to_string(alias)})"
 
           not is_nil(alias) and not is_nil(property) and not is_nil(as) ->
-            "#{Util.converted_value(alias)}.#{property} AS #{as}"
+            "#{Util.value_to_string(alias)}.#{property} AS #{as}"
 
           not is_nil(alias) and not is_nil(property) ->
-            "#{Util.converted_value(alias)}.#{property}"
+            "#{Util.value_to_string(alias)}.#{property}"
 
           not is_nil(alias) and not is_nil(as) ->
-            "#{Util.converted_value(alias)} AS #{as}"
+            "#{Util.value_to_string(alias)} AS #{as}"
 
           not is_nil(alias) ->
-            "#{Util.converted_value(alias)}"
+            "#{Util.value_to_string(alias)}"
 
           true ->
             "Wrong parameters provided to with function"
@@ -230,12 +228,12 @@ defmodule RedisGraph.QueryBuilder do
     query_list =
       Stream.map(elements, fn element ->
         %{alias: alias, property: property, operator: operator, value: value} = element
-        "#{Util.converted_value(alias)} #{operator} #{Util.converted_value(value)}"
+        "#{Util.value_to_string(alias)} #{operator} #{Util.value_to_string(value)}"
         cond do
           not is_nil(alias) and not is_nil(property) ->
-            "#{Util.converted_value(alias)}.#{property} #{operator} #{Util.converted_value(value)}"
+            "#{Util.value_to_string(alias)}.#{property} #{operator} #{Util.value_to_string(value)}"
           not is_nil(alias) ->
-            "#{Util.converted_value(alias)} #{operator} #{Util.converted_value(value)}"
+            "#{Util.value_to_string(alias)} #{operator} #{Util.value_to_string(value)}"
           true ->
             "Wrong parameters provided to with function"
         end
@@ -249,12 +247,12 @@ defmodule RedisGraph.QueryBuilder do
     query_list =
       Stream.map(elements, fn element ->
         %{alias: alias, property: property, operator: operator, value: value} = element
-        "#{Util.converted_value(alias)} #{operator} #{Util.converted_value(value)}"
+        "#{Util.value_to_string(alias)} #{operator} #{Util.value_to_string(value)}"
         cond do
           is_atom(alias) and is_binary(property) ->
-            "#{Util.converted_value(alias)}.#{property} #{operator} #{Util.converted_value(value)}"
+            "#{Util.value_to_string(alias)}.#{property} #{operator} #{Util.value_to_string(value)}"
           is_atom(alias) ->
-            "#{Util.converted_value(alias)} #{operator} #{Util.converted_value(value)}"
+            "#{Util.value_to_string(alias)} #{operator} #{Util.value_to_string(value)}"
           true ->
             "Wrong parameters provided to with function"
         end
@@ -268,12 +266,12 @@ defmodule RedisGraph.QueryBuilder do
     query_list =
       Stream.map(elements, fn element ->
         %{alias: alias, property: property, operator: operator, value: value} = element
-        "#{Util.converted_value(alias)} #{operator} #{Util.converted_value(value)}"
+        "#{Util.value_to_string(alias)} #{operator} #{Util.value_to_string(value)}"
         cond do
           is_atom(alias) and is_binary(property) ->
-            "#{Util.converted_value(alias)}.#{property} #{operator} #{Util.converted_value(value)}"
+            "#{Util.value_to_string(alias)}.#{property} #{operator} #{Util.value_to_string(value)}"
           is_atom(alias) ->
-            "#{Util.converted_value(alias)} #{operator} #{Util.converted_value(value)}"
+            "#{Util.value_to_string(alias)} #{operator} #{Util.value_to_string(value)}"
           true ->
             "Wrong parameters provided to with function"
         end

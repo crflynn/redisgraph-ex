@@ -49,27 +49,22 @@ defmodule RedisGraph.QueryResult do
   +----------------+-------------+-----------------+--------------+
   ```
   """
-  alias RedisGraph.Edge
+  alias RedisGraph.Relationship
   alias RedisGraph.Node
 
   @labels_added "Labels added"
+  @labels_removed "Labels removed"
   @nodes_created "Nodes created"
   @nodes_deleted "Nodes deleted"
-  @relationships_deleted "Relationships deleted"
   @properties_set "Properties set"
+  @properties_removed "Properties removed"
   @relationships_created "Relationships created"
+  @relationships_deleted "Relationships deleted"
+  @indices_created "Indices created"
+  @indices_deleted "Indices deleted"
   @query_internal_execution_time "Query internal execution time"
 
   @graph_removed_internal_execution_time "Graph removed, internal execution time"
-
-  @column_type %{
-    COLUMN_UNKNOWN: 0,
-    COLUMN_SCALAR: 1,
-    # Unused, retained for client compatibility.
-    COLUMN_NODE: 2,
-    # Unused, retained for client compatibility.
-    COLUMN_RELATION: 3
-  }
 
   @value_type %{
     VALUE_UNKNOWN: 0,
@@ -87,10 +82,15 @@ defmodule RedisGraph.QueryResult do
   }
 
   @type t() :: %__MODULE__{
+          conn: pid(),
+          graph_name: String.t(),
           raw_result_set: list(any()) | String.t(),
-          header: list(String.t()),
+          header: list(atom()),
           result_set: list(list(any())),
-          statistics: %{String.t() => String.t()}
+          statistics: %{String.t() => String.t()},
+          labels: %{number() => String.t()},
+          property_keys: %{number() => String.t()},
+          relationship_types: %{number() => String.t()}
         }
 
   @enforce_keys [:conn, :graph_name, :raw_result_set]
@@ -123,6 +123,8 @@ defmodule RedisGraph.QueryResult do
     process_raw_result(s)
   end
 
+  # Process result for GRAPH.QUERY
+  @spec process_raw_result(t()) :: t()
   defp process_raw_result(%{raw_result_set: result} = query_result) when is_list(result) do
     if length(result) == 1 do
       %{query_result | statistics: parse_statistics(Enum.at(result, 0))}
@@ -134,7 +136,7 @@ defmodule RedisGraph.QueryResult do
     end
   end
 
-  # process the result of a delete query
+  #  Process result for GRAPH.DELETE
   defp process_raw_result(%{raw_result_set: result} = query_result) when is_binary(result) do
     %{query_result | statistics: parse_statistics(result)}
   end
@@ -149,15 +151,20 @@ defmodule RedisGraph.QueryResult do
     end
   end
 
+  @spec parse_statistics(list(any()) | String.t()) :: map()
   defp parse_statistics(raw_statistics) when is_list(raw_statistics) do
     stats = [
       @labels_added,
+      @labels_removed,
       @nodes_created,
-      @properties_set,
-      @relationships_created,
       @nodes_deleted,
+      @properties_set,
+      @properties_removed,
+      @relationships_created,
       @relationships_deleted,
-      @query_internal_execution_time
+      @indices_created,
+      @indices_deleted,
+      @query_internal_execution_time,
     ]
 
     stats
@@ -165,16 +172,9 @@ defmodule RedisGraph.QueryResult do
     |> Enum.into(%{})
   end
 
-  # delete query result
   defp parse_statistics(raw_statistics) when is_binary(raw_statistics) do
     %{
-      @labels_added => nil,
-      @nodes_created => nil,
-      @properties_set => nil,
-      @relationships_created => nil,
-      @nodes_deleted => nil,
-      @relationships_deleted => nil,
-      @query_internal_execution_time =>
+      @graph_removed_internal_execution_time =>
         extract_value(@graph_removed_internal_execution_time, raw_statistics)
     }
   end
@@ -202,10 +202,12 @@ defmodule RedisGraph.QueryResult do
     end
   end
 
+  @spec parse_header(t()) :: list(atom())
   defp parse_header(%{raw_result_set: [header | _tail]} = _query_result) do
-    header |> Enum.map(fn h -> Enum.at(h, 1) end)
+    header |> Enum.map(fn h -> Enum.at(h, 1) |> String.to_atom end)
   end
 
+  @spec fetch_metadata(t()) :: t()
   defp fetch_metadata(%{conn: conn, graph_name: name} = query_result) do
     labels = parse_procedure_call(RedisGraph.labels(conn, name))
     property_keys = parse_procedure_call(RedisGraph.property_keys(conn, name))
@@ -234,6 +236,7 @@ defmodule RedisGraph.QueryResult do
     end
   end
 
+  @spec parse_results(t()) :: t()
   defp parse_results(%{raw_result_set: [header | _tail]} = query_result) do
     query_result = fetch_metadata(query_result)
     # IO.puts("parse_results")
@@ -252,6 +255,7 @@ defmodule RedisGraph.QueryResult do
     end
   end
 
+  @spec parse_records(t()) :: list(any)
   defp parse_records(%{raw_result_set: [_header | [records_array | _statistics]]} = query_result) do
     # IO.puts("parse_records")
     # IO.puts("parse_records > query_result")
@@ -262,6 +266,7 @@ defmodule RedisGraph.QueryResult do
     # IO.inspect(records)
   end
 
+  @spec parse_row(t(), list(any())) :: list(any())
   defp parse_row(%{raw_result_set: [header | _tail]} = query_result, row) do
     # IO.puts("parse_row > query_result")
     # IO.inspect(query_result)
@@ -278,43 +283,36 @@ defmodule RedisGraph.QueryResult do
     # IO.puts("parse_row > properties")
     # IO.inspect(properties)
     # IO.puts("parse_row > end")
-    # Enum.with_index(row)
-    # |> IO.inspect |> Enum.map(fn {cell, idx} ->
-    #   parse_cell(query_result, cell, header |> Enum.at(idx) |> Enum.at(0))
-    # end)
-    cells = Enum.map(row, fn cell -> parse_cell(query_result, cell) end)
-    IO.puts("parse_row > cells")
-    IO.inspect(cells)
+
+    cells = Enum.with_index(row) |> Enum.map(fn {cell, index} ->
+      [column_type, alias] = header |> Enum.at(index)
+      # IO.puts("column_type")
+      # IO.inspect(column_type)
+      # IO.puts("column_type")
+      # IO.inspect(column_type)
+      parse_cell(query_result, cell, column_type, String.to_atom(alias))
+    end)
+    #cells = Enum.map(row, fn cell -> parse_cell(query_result, cell) end)
+    # IO.puts("parse_row > cells")
+    # IO.inspect(cells)
   end
 
-  def extract_node_value(query_result, value) do
-  end
+  # https://redis.io/docs/stack/graph/design/client_spec/
+  @spec parse_cell(t(), list(any()), number(), atom() | nil) :: Node.t()
+  defp parse_cell(query_result, cell, column_type \\ 1, alias \\ nil)
 
-  # https://oss.redislabs.com/redisgraph/client_spec/
-  defp parse_cell(query_result, cell, 1) do
-    parse_scalar(query_result, cell)
-  end
-
-  defp parse_cell(query_result, cell, 2) do
-    parse_node(query_result, cell)
-  end
-
-  defp parse_cell(query_result, cell, 3) do
-    parse_edge(query_result, cell)
-  end
-
-  defp parse_cell(query_result, cell) do
-    IO.puts("parse_cell > cell")
-    IO.inspect(cell)
+  defp parse_cell(query_result, cell, 1, alias) do
+    # IO.puts("parse_cell > cell")
+    # IO.inspect(cell)
     [value_type | [value]] = cell
 
     res =
       cond do
         value_type == @value_type[:VALUE_NODE] ->
-          parse_node(query_result, value)
+          parse_node(query_result, value, alias)
 
         value_type == @value_type[:VALUE_EDGE] ->
-          parse_edge(query_result, value)
+          parse_relationship(query_result, value, alias)
 
         value_type == @value_type[:VALUE_NULL] || value_type == @value_type[:VALUE_INTEGER] ||
             value_type == @value_type[:VALUE_STRING] ->
@@ -326,7 +324,10 @@ defmodule RedisGraph.QueryResult do
         value_type == @value_type[:VALUE_DOUBLE] ->
           String.to_float(value)
 
-        value_type == @value_type[:VALUE_ARRAY] || value_type == @value_type[:VALUE_PATH] ||
+        value_type == @value_type[:VALUE_ARRAY] ->
+          Enum.map(value, fn inner_value -> parse_cell(query_result, inner_value) end)
+
+        value_type == @value_type[:VALUE_PATH] ||
           value_type == @value_type[:VALUE_MAP] || value_type == @value_type[:VALUE_POINT] ->
           "will be implemented in future"
 
@@ -334,22 +335,26 @@ defmodule RedisGraph.QueryResult do
           "unknown value type"
       end
 
-    IO.puts("parse_cell > res")
-    IO.inspect(res)
+    # IO.puts("parse_cell > res")
+    # IO.inspect(res)
   end
 
-  defp parse_scalar(query_result, cell) do
-    Enum.at(cell, 1)
-    # IO.puts("parse_row > query_result")
-    # IO.inspect(query_result)
-    # IO.puts("parse_row > cell")
-    # IO.inspect(cell)
+
+  # Unused, retained for client compatibility.
+  defp parse_cell(query_result, cell, 2, alias) do
+    parse_node(query_result, cell, alias)
   end
 
-  defp parse_node(query_result, cell) do
+   # Unused, retained for client compatibility.
+  defp parse_cell(query_result, cell, 3, alias) do
+    parse_relationship(query_result, cell, alias)
+  end
+
+  @spec parse_node(t(), list(any()), atom()) :: Node.t()
+  defp parse_node(query_result, cell, alias) do
     [node_id | [label_indexes | [properties]]] = cell
-    IO.puts("parse_node > cell")
-    IO.inspect(cell)
+    # IO.puts("parse_node > cell")
+    # IO.inspect(cell)
     # [ id | [ labels | [ properties ]]] = value
     # labels = Enum.map(labels, fn label_id -> Map.get(all_labels, label_id) end)
     # properties = Enum.map(properties, fn [property_id | [_valueType | [value]]] -> {:"#{Map.get(all_propertyKeys, property_id)}", value} end) |> Map.new
@@ -357,41 +362,43 @@ defmodule RedisGraph.QueryResult do
     # new(node)
     Node.new(%{
       id: node_id,
+      alias: alias,
       labels: parse_labels(query_result, label_indexes),
       properties: parse_entity_properties(query_result, properties)
     })
   end
 
-  defp parse_edge(query_result, cell) do
-    [edge_id | [relation_index | [src_node_id | [dest_node_id | [properties]]]]] = cell
+  @spec parse_relationship(t(), list(any()), atom()) :: Relationship.t()
+  defp parse_relationship(query_result, cell, alias) do
+    [relationship_id | [relation_index | [src_node_id | [dest_node_id | [properties]]]]] = cell
 
-    Edge.new(%{
-      id: edge_id,
-      relation: get_relationship_type(query_result, relation_index),
+    Relationship.new(%{
+      id: relationship_id,
+      alias: alias,
+      type: parse_relationship_type(query_result, relation_index),
       src_node: src_node_id,
       dest_node: dest_node_id,
       properties: parse_entity_properties(query_result, properties)
     })
   end
 
+  @spec parse_labels(t(), list(number())) :: list()
   defp parse_labels(query_result, label_indexes) do
     Enum.map(label_indexes, fn label_id -> Map.get(query_result.labels, label_id) end)
   end
 
-  defp get_property_key(query_result, property_key_index) do
-    Enum.at(query_result.property_keys, property_key_index)
-  end
-
-  defp get_relationship_type(query_result, relationship_type_index) do
+  @spec parse_relationship_type(t(), list(number())) :: list()
+  defp parse_relationship_type(query_result, relationship_type_index) do
     Map.get(query_result.relationship_types, relationship_type_index)
   end
 
+  @spec parse_entity_properties(t(), list(number())) :: list()
   defp parse_entity_properties(query_result, properties) do
-    IO.puts("parse_entity_properties")
-    IO.inspect(properties)
+    # IO.puts("parse_entity_properties")
+    # IO.inspect(properties)
 
     Enum.map(properties, fn [property_id | cell] ->
-      {:"#{Map.get(query_result.property_keys, property_id)}", parse_cell(query_result, cell)}
+      {:"#{Map.get(query_result.property_keys, property_id)}", parse_cell(query_result, cell, 1)}
     end)
     |> Enum.into(%{})
 
@@ -403,36 +410,46 @@ defmodule RedisGraph.QueryResult do
     # |> Enum.into(%{})
   end
 
-  @doc "Transform a QueryResult into a list of maps as records."
-  @spec results_to_maps(t()) :: list(map())
-  def results_to_maps(%{header: header, result_set: records} = _query_result) do
-    records
-    |> Enum.map(fn record ->
-      record
-      |> Enum.with_index()
-      |> Enum.map(fn {v, idx} -> {Enum.at(header, idx), v} end)
-      |> Enum.into(%{})
-    end)
-  end
+  # @doc "Transform a QueryResult into a list of maps as records."
+  # @spec results_to_maps(t()) :: list(map())
+  # def results_to_maps(%{header: header, result_set: records} = _query_result) do
+  #   records
+  #   |> Enum.map(fn record ->
+  #     record
+  #     |> Enum.with_index()
+  #     |> Enum.map(fn {v, idx} -> {Enum.at(header, idx), v} end)
+  #     |> Enum.into(%{})
+  #   end)
+  # end
 
-  @doc "Pretty print a QueryResult to a tabular string using `Scribe`."
-  @spec pretty_print(t()) :: String.t()
-  def pretty_print(%{header: header, result_set: records} = query_result) do
-    if is_nil(header) or is_nil(records) do
-      ""
-    else
-      Scribe.format(results_to_maps(query_result), data: header)
-    end
-  end
+  # @doc "Pretty print a QueryResult to a tabular string using `Scribe`."
+  # @spec pretty_print(t()) :: String.t()
+  # def pretty_print(%{header: header, result_set: records} = query_result) do
+  #   if is_nil(header) or is_nil(records) do
+  #     ""
+  #   else
+  #     IO.puts("header")
+  #     IO.inspect(header)
+  #     IO.puts("results_to_maps(query_result)")
+  #     IO.inspect(results_to_maps(query_result))
+  #     Scribe.print(results_to_maps(query_result))
+  #   end
+  # end
 
   defp get_stat(query_result, stat) do
-    Map.get(query_result.statistics, stat, 0)
+    Map.get(query_result.statistics, stat)
   end
 
   @doc "Get the `labels added` quantity from a QueryResult."
   @spec labels_added(t()) :: String.t()
   def labels_added(query_result) do
     get_stat(query_result, @labels_added)
+  end
+
+  @doc "Get the `labels removed` quantity from a QueryResult."
+  @spec labels_removed(t()) :: String.t()
+  def labels_removed(query_result) do
+    get_stat(query_result, @labels_removed)
   end
 
   @doc "Get the `nodes created` quantity from a QueryResult."
@@ -453,6 +470,12 @@ defmodule RedisGraph.QueryResult do
     get_stat(query_result, @properties_set)
   end
 
+  @doc "Get the `properties removed` quantity from a QueryResult."
+  @spec properties_removed(t()) :: String.t()
+  def properties_removed(query_result) do
+    get_stat(query_result, @properties_removed)
+  end
+
   @doc "Get the `relationships created` quantity from a QueryResult."
   @spec relationships_created(t()) :: String.t()
   def relationships_created(query_result) do
@@ -463,6 +486,18 @@ defmodule RedisGraph.QueryResult do
   @spec relationships_deleted(t()) :: String.t()
   def relationships_deleted(query_result) do
     get_stat(query_result, @relationships_deleted)
+  end
+
+  @doc "Get the `indices created` quantity from a QueryResult."
+  @spec indices_created(t()) :: String.t()
+  def indices_created(query_result) do
+    get_stat(query_result, @indices_created)
+  end
+
+  @doc "Get the `indices deleted` quantity from a QueryResult."
+  @spec indices_deleted(t()) :: String.t()
+  def indices_deleted(query_result) do
+    get_stat(query_result, @indices_deleted)
   end
 
   @doc "Get the `query internal execution time` (ms) from a QueryResult."

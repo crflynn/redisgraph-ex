@@ -61,8 +61,9 @@ defmodule RedisGraph.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:redix, "~> 1.1"},
+      {:redix, "~> 1.2"},
       {:castore, ">= 0.0.0"},
+      {:scribe, "~> 0.10.0"},
 
       # dev
       {:ex_doc, "~> 0.27", only: :dev, runtime: false},
