@@ -19,20 +19,11 @@ permissions:
 
 jobs:
   test:
-    # Set up a Postgres DB service. By default, Phoenix applications
-    # use Postgres. This creates a database for running tests.
-    # Additional services can be defined here if required.
     services:
-      db:
-        image: postgres:12
-        ports: ['5432:5432']
-        env:
-          POSTGRES_PASSWORD: postgres
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
+      redisgraph:
+        image: redis/redis-stack-server
+        ports:
+          - 6379:6379
 
     runs-on: ubuntu-20.04
     name: Test on OTP ${{matrix.otp}} / Elixir ${{matrix.elixir}}
@@ -93,9 +84,8 @@ jobs:
 
     # Step: Check that the checked in code has already been formatted.
     # This step fails if something was found unformatted.
-    # Customize this step as desired.
     - name: Check Formatting
-      run: mix format
+      run: mix format --check-formatted
 
     # Step: Execute the tests.
     - name: Run tests with coverage
