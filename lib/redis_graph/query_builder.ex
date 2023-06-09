@@ -1,4 +1,10 @@
 defmodule RedisGraph.QueryBuilder do
+  @moduledoc """
+  Module that builds the query string from the Redisgraph.Query context.
+
+  Functions shouldn't be used directly. Instead, the client needs to use
+  the Redisgraph.Query.build_query() function to construct the string.
+  """
   alias RedisGraph.{Node, Relationship, Util, Query}
 
   @spec build_query(Query.t()) :: {:ok, String.t()} | {:error, String.t()}
