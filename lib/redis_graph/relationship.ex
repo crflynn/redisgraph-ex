@@ -26,6 +26,38 @@ defmodule RedisGraph.Relationship do
   @enforce_keys [:src_node, :dest_node, :type]
   defstruct [:id, :alias, :src_node, :dest_node, :type, properties: %{}]
 
+  @doc """
+  Create a new Relationship from provided argument.
+  Argument should be a map and key: `type` with value of String type is required.
+
+  ## Example
+  ```
+  alias RedisGraph.{Node, Relationship}
+
+  john = Node.new(%{
+    labels: ["person"],
+    properties: %{
+      name: "John Doe"
+    }
+  })
+
+  bob = Node.new(%{
+    labels: ["person"],
+    properties: %{
+      name: "Bob Nilson"
+    }
+  })
+
+  relationship = Relationship.new(%{
+    src_node: john,
+    dest_node: bob,
+    type: "friend",
+    properties: %{
+      best_friend: true
+    }
+  })
+  ```
+  """
   @spec new(map()) :: t()
   def new(%{type: type} = map) when is_binary(type) do
     relationship = struct(__MODULE__, map)
