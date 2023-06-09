@@ -74,8 +74,8 @@ defmodule RedisGraph.Graph do
   {:ok, graph} = Graph.add_edge(graph, edge)
   ```
   """
-  @spec new(map()) :: t()
-  def new(graph_name) do
-    struct(__MODULE__, graph_name)
+  @spec new(%{name: String.t()}) :: t()
+  def new(%{name: name} = map) when is_binary(name) do
+    struct(__MODULE__, map)
   end
 end
