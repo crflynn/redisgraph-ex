@@ -7,9 +7,9 @@ defmodule RedisGraph.QueryResult do
   identifiers, specifically labels, property keys, and relationship types.
 
   The labels refer to the `label` attribute of either Node entities
-  in the graph, The property keys are the keys found in any Node or Edge
+  in the graph, The property keys are the keys found in any Node or Relationship
   property maps. The relationship types are the `relation` attributes of
-  Edge entities in the graph.
+  Relationship entities in the graph.
 
   ## Example
 
