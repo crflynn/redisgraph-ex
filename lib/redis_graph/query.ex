@@ -1,32 +1,20 @@
 defmodule RedisGraph.Query do
-  alias RedisGraph.{Edge, QueryBuilder}
+  alias RedisGraph.{Relationship, QueryBuilder}
 
-  @type clauses() :: :create | :match | :optional_match | :merge | :delete | :set | :on_match_set | :on_create_set | :with | :where | :order_by | :limit | :skip | :return
   @type t() :: %__MODULE__{
           current_clause: clauses() | nil,
-          last_element: RedisGraph.Node.t() | RedisGraph.Edge.t() | where_t() | nil,
+          last_element: RedisGraph.Node.t() | RedisGraph.Relationship.t() | nil,
           error: String.t() | nil,
           nodes: %{atom() => RedisGraph.Node.t()},
-          edges: %{atom() => RedisGraph.Edge.t()},
+          relationships: %{atom() => RedisGraph.Relationship.t()},
           variables: [String.t()],
           used_clauses: [[atom()]] | [],
           used_clauses_with_data: [[map()]] | []
         }
 
-  @type where_t() :: %{
-          alias: atom(),
-          key: String.t(),
-          operator: String.t(),
-          value:
-            String.t()
-            | number()
-            | boolean()
-            | nil
-            | list(String.t() | number() | boolean() | nil)
-            | map()
-        }
+  @typep clauses() :: :create | :match | :optional_match | :merge | :delete | :set | :on_match_set | :on_create_set | :with | :where | :order_by | :limit | :skip | :return
 
-  @type accepted_operator_in_where_clause() ::
+  @typep accepted_operator_in_where_clause() ::
           :equals
           | :not_equal
           | :bigger
@@ -38,8 +26,7 @@ defmodule RedisGraph.Query do
           | :contains
           | :in
 
-  @type accepted_value() ::
-          String.t() | number() | boolean() | nil | list(String.t() | number() | boolean() | nil | map()) | map()
+  @typep accepted_value() :: String.t() | number() | boolean() | nil | list() | map()
 
   @accepted_operator_to_string_in_where_clause %{
     equals: "=",
@@ -51,7 +38,9 @@ defmodule RedisGraph.Query do
     starts_with: "STARTS WITH",
     ends_with: "ENDS WITH",
     contains: "CONTAINS",
-    in: "IN"
+    in: "IN",
+    is: "IS",
+    is_not: "IS NOT"
   }
 
   @accepted_operator_for_number_in_where_clause [
@@ -63,7 +52,7 @@ defmodule RedisGraph.Query do
     :smaller_or_equal
   ]
 
-  @accepted_operator_for_nil_in_where_clause [:equals, :not_equal]
+  @accepted_operator_for_nil_in_where_clause [:is, :is_not]
 
   @accepted_operator_for_binary_in_where_clause [
     :equals,
@@ -86,7 +75,7 @@ defmodule RedisGraph.Query do
     :last_element,
     error: nil,
     nodes: %{},
-    edges: %{},
+    relationships: %{},
     variables: [],
     used_clauses: [],
     used_clauses_with_data: []
@@ -206,7 +195,7 @@ defmodule RedisGraph.Query do
   @spec node(t(), atom(), list(String.t()), map()) :: t()
   def node(context, alias, labels \\ [], properties \\ %{})
 
-  def node(%{error: nil} = context = %{error: nil}, alias, labels, properties) when is_list(labels) and is_map(properties) do
+  def node(%{error: nil} = context, alias, labels, properties) when is_list(labels) and is_map(properties) do
     node = RedisGraph.Node.new(%{alias: alias, labels: labels, properties: properties})
     last_element = Map.get(context, :last_element)
 
@@ -223,16 +212,31 @@ defmodule RedisGraph.Query do
     end
     context = check_if_match_or_create_or_merge_clause_provided(context, "node()", false)
     context = check_if_provided_context_has_correct_structure(context)
+
+    # used_clauses_with_data = Map.get(context, :used_clauses_with_data, [])
+
+    # alias_present? = List.last(used_clauses_with_data, %{})|> Map.get(:elements, []) |> Stream.map(fn element -> alias == element end) |> Enum.member?(true)
+    # # alias_present? = Map.get(context, :relationships, %{}) |> Map.has_key?(alias) or Map.get(context, :nodes, %{}) |> Map.has_key?(alias)
+    # context = if(alias_present?) do
+    #   Map.put(
+    #     context,
+    #     :error,
+    #     "Provided alias: :#{alias} was alreay mentioned before. Pass the another alias: e.g. new() |> match() |> node(:n) |> node(:m) |> order_by_property(:n, \"age\") |> ..."
+    #   )
+    # else
+    #   context
+    # end
+
     error = Map.get(context, :error)
 
     case error do
       nil ->
         context =
-          if(is_struct(last_element, Edge)) do
+          if(is_struct(last_element, Relationship)) do
             alias = Map.get(last_element, :alias)
             dest_node = Map.get(last_element, :dest_node)
 
-            new_edge =
+            new_relationship =
               if(is_nil(dest_node)) do
                 Map.put(last_element, :dest_node, node)
               else
@@ -240,8 +244,8 @@ defmodule RedisGraph.Query do
               end
 
             {_old_value, updated_context} =
-              Map.get_and_update(context, :edges, fn edges ->
-                {edges, Map.put(edges, alias, new_edge)}
+              Map.get_and_update(context, :relationships, fn relationships ->
+                {relationships, Map.put(relationships, alias, new_relationship)}
               end)
 
             updated_context
@@ -300,7 +304,7 @@ defmodule RedisGraph.Query do
         context
       end
     context =
-      if(is_struct(last_element, Edge)) do
+      if(is_struct(last_element, Relationship)) do
         context = Map.put(
           context,
           :error,
@@ -311,16 +315,39 @@ defmodule RedisGraph.Query do
       else
         context
       end
+    current_clause = Map.get(context, :current_clause)
+    context =
+      if((current_clause == :create) and (type == "")) do
+        Map.put(
+            context,
+            :error,
+            "When you create a relationship, the type has to be provided. E.g. new() |> match() |> node(:n) |> relationship_from_to(:r, \"WORKS\") |> ..."
+          )
+      else
+        context
+      end
     context = check_if_alias_is_atom(context, alias)
     context = check_if_match_or_create_or_merge_clause_provided(context, "relationship_from_to()", false)
     context = check_if_provided_context_has_correct_structure(context)
+
+    # alias_present? = Map.get(context, :relationships, %{}) |> Map.has_key?(alias) or Map.get(context, :nodes, %{}) |> Map.has_key?(alias)
+    # context = if(alias_present?) do
+    #   Map.put(
+    #     context,
+    #     :error,
+    #     "Provided alias: :#{alias} was alreay mentioned before." <>
+    #     " Pass the another alias: e.g. new() |> match() |> node(:n) |> relationship_from_to(:r, \"WORKS\")  |> relationship_from_to(:t, \"KNOWS\") |> order_by_property(:n, \"age\") |> ..."
+    #   )
+    # else
+    #   context
+    # end
 
     error = Map.get(context, :error)
 
     case error do
       nil ->
-        edge =
-          RedisGraph.Edge.new(%{
+        relationship =
+          RedisGraph.Relationship.new(%{
             alias: alias,
             type: type,
             properties: properties,
@@ -328,12 +355,12 @@ defmodule RedisGraph.Query do
           })
 
         {_old_value, context} =
-          Map.get_and_update(context, :edges, fn old_map ->
-            {old_map, Map.put(old_map, alias, edge)}
+          Map.get_and_update(context, :relationships, fn old_map ->
+            {old_map, Map.put(old_map, alias, relationship)}
           end)
 
         context = update_used_clauses_with_data(context, alias)
-        context = Map.put(context, :last_element, edge)
+        context = Map.put(context, :last_element, relationship)
         context
 
       _ ->
@@ -380,7 +407,7 @@ defmodule RedisGraph.Query do
         context
       end
     context =
-      if(is_struct(last_element, Edge)) do
+      if(is_struct(last_element, Relationship)) do
         context = Map.put(
           context,
           :error,
@@ -391,16 +418,39 @@ defmodule RedisGraph.Query do
       else
         context
       end
+    current_clause = Map.get(context, :current_clause)
+    context =
+      if((current_clause == :create) and (type == "")) do
+        Map.put(
+            context,
+            :error,
+            "When you create a relationship, the type has to be provided. E.g. new() |> match() |> node(:n) |> relationship_from_to(:r, \"WORKS\") |> ..."
+          )
+      else
+        context
+      end
     context = check_if_alias_is_atom(context, alias)
     context = check_if_match_or_create_or_merge_clause_provided(context, "relationship_to_from()", false)
     context = check_if_provided_context_has_correct_structure(context)
+
+    # alias_present? = Map.get(context, :relationships, %{}) |> Map.has_key?(alias) or Map.get(context, :nodes, %{}) |> Map.has_key?(alias)
+    # context = if(alias_present?) do
+    #   Map.put(
+    #     context,
+    #     :error,
+    #     "Provided alias: :#{alias} was alreay mentioned before." <>
+    #     " Pass the another alias: e.g. new() |> match() |> node(:n) |> relationship_to_from(:r, \"WORKS\")  |> relationship_to_from(:t, \"KNOWS\") |> order_by_property(:n, \"age\") |> ..."
+    #   )
+    # else
+    #   context
+    # end
 
     error = Map.get(context, :error)
 
     case error do
       nil ->
-        edge =
-          RedisGraph.Edge.new(%{
+        relationship =
+          RedisGraph.Relationship.new(%{
             alias: alias,
             type: type,
             properties: properties,
@@ -408,12 +458,12 @@ defmodule RedisGraph.Query do
           })
 
         {_old_value, context} =
-          Map.get_and_update(context, :edges, fn old_map ->
-            {old_map, Map.put(old_map, alias, edge)}
+          Map.get_and_update(context, :relationships, fn old_map ->
+            {old_map, Map.put(old_map, alias, relationship)}
           end)
 
         context = update_used_clauses_with_data(context, alias)
-        context = Map.put(context, :last_element, edge)
+        context = Map.put(context, :last_element, relationship)
         context
 
       _ ->
@@ -490,7 +540,7 @@ defmodule RedisGraph.Query do
     context = if(Map.has_key?(@accepted_operator_to_string_in_where_clause, operator)) do
       context
     else
-      Map.put(context, :error, "Provided value: \"#{value}\" or/and operator: :#{operator} in the WHERE clause is not supported.")
+      Map.put(context, :error, "Provided value: #{value} or/and operator: :#{operator} in the WHERE clause is not supported.")
     end
 
     value_accepted? = cond do
@@ -505,7 +555,7 @@ defmodule RedisGraph.Query do
     context = if(value_accepted?) do
       context
     else
-      Map.put(context, :error, "Provided value: \"#{value}\" or/and operator: :#{operator} in the WHERE clause is not supported.")
+      Map.put(context, :error, "Provided value: #{value} or/and operator: :#{operator} in the WHERE clause is not supported.")
     end
 
     %{error: error} = context
@@ -576,6 +626,17 @@ defmodule RedisGraph.Query do
     where(context, alias, property, operator, value, :xor)
   end
 
+  @spec or_not_where(
+  t(),
+  atom(),
+  String.t(),
+  accepted_operator_in_where_clause(),
+  String.t() | number() | boolean() | list() | nil
+  ) :: t()
+  def or_not_where(context, alias, property, operator, value) do
+    where(context, alias, property, operator, value, :or_not)
+  end
+
   @spec and_not_where(
           t(),
           atom(),
@@ -585,17 +646,6 @@ defmodule RedisGraph.Query do
         ) :: t()
   def and_not_where(context, alias, property, operator, value) do
     where(context, alias, property, operator, value, :and_not)
-  end
-
-  @spec or_not_where(
-          t(),
-          atom(),
-          String.t(),
-          accepted_operator_in_where_clause(),
-          String.t() | number() | boolean() | list() | nil
-        ) :: t()
-  def or_not_where(context, alias, property, operator, value) do
-    where(context, alias, property, operator, value, :or_not)
   end
 
   @spec xor_not_where(
@@ -655,8 +705,30 @@ defmodule RedisGraph.Query do
     context
   end
 
+  @doc """
+  Add `LIMIT` clause into the context and receive the updated context.
+  Provide the `context` and `number` of rows you want to limit to.
+
+  ## Example
+  ```
+  alias RedisGraph.{Query}
+
+  {:ok, query} = Query.new() |> Query.match() |> Query.node(:n) |> Query.return(:n) |> Query.limit(10)|> Query.build_query()
+  # query will hold
+  # "MATCH (n) RETURN n LIMIT 10"
+  ```
+  If the client uses the function incorrectly, the error will be persisted and
+  returned when the client will try to build the query.
+
+  ## Example
+  ```
+  {:error, query} = Query.new() |> Query.match() |> Query.node(:n) |> Query.return(:n) |> Query.limit("test")|> Query.build_query()
+  # error will hold
+  # "Wrong number parameter was probided, only non negatibe integers supported. E.g. new() |> match() |> node(:n) |> return(:n) |> limit(10)|> build_query()"
+  ```
+  """
   @spec limit(t(), non_neg_integer()) :: t()
-  def limit(%{error: nil} = context, value) do
+  def limit(%{error: nil} = context, number) do
     current_clause = Map.get(context, :current_clause)
 
     context =
@@ -666,7 +738,12 @@ defmodule RedisGraph.Query do
       else
         context
       end
-
+    context =
+      if((is_number(number)) and (number > 0)) do
+        context
+      else
+        Map.put(context, :error, "Wrong number parameter was probided, only non negatibe integers supported. E.g. new() |> match() |> node(:n) |> return(:n) |> limit(10)|> build_query()")
+      end
     context = check_if_match_or_create_or_merge_clause_provided(context, :limit)
     context = check_if_provided_context_has_correct_structure(context)
 
@@ -674,7 +751,7 @@ defmodule RedisGraph.Query do
 
     case error do
       nil ->
-        context = update_used_clauses_with_data(context, value)
+        context = update_used_clauses_with_data(context, number)
         context = Map.put(context, :current_clause, :limit)
         context
 
@@ -683,12 +760,12 @@ defmodule RedisGraph.Query do
     end
   end
 
-  def limit(context, _value) do
+  def limit(context, _number) do
     context
   end
 
   @spec skip(t(), non_neg_integer()) :: t()
-  def skip(%{error: nil} = context, value) do
+  def skip(%{error: nil} = context, number) do
     current_clause = Map.get(context, :current_clause)
 
     context =
@@ -697,6 +774,12 @@ defmodule RedisGraph.Query do
         Map.put(context, :current_clause, :skip)
       else
         context
+      end
+    context =
+      if((is_number(number)) and (number > 0)) do
+        context
+      else
+        Map.put(context, :error, "Wrong number parameter was probided, only non negatibe integers supported. E.g. new() |> match() |> node(:n) |> return(:n) |> skip(10)|> build_query()")
       end
 
     context = check_if_match_ends_with_relationship(context)
@@ -707,7 +790,7 @@ defmodule RedisGraph.Query do
 
     case error do
       nil ->
-        context = update_used_clauses_with_data(context, value)
+        context = update_used_clauses_with_data(context, number)
         context = Map.put(context, :current_clause, :skip)
         context
 
@@ -716,46 +799,46 @@ defmodule RedisGraph.Query do
     end
   end
 
-  def skip(context, _value) do
+  def skip(context, _number) do
     context
   end
 
-  @spec return(t(), atom(), String.t() | nil) :: t()
+  @spec return(t(), atom(), atom() | nil) :: t()
   def return(context, alias, as \\ nil) do
     return_function_and_property(context, nil, alias, nil, as, false)
   end
 
-  @spec return_property(t(), atom(), String.t(), String.t() | nil) :: t()
+  @spec return_property(t(), atom(), String.t(), atom() | nil) :: t()
   def return_property(context, alias, property, as \\ nil) do
     return_function_and_property(context, nil, alias, property, as, false)
   end
 
-  @spec return_function(t(), String.t(), atom(), String.t() | nil) :: t()
+  @spec return_function(t(), String.t(), atom(), atom() | nil) :: t()
   def return_function(context, function, alias, as \\ nil) do
     return_function_and_property(context, function, alias, nil, as, false)
   end
 
-  @spec return_function_and_property(t(), String.t(), atom(), String.t(), String.t() | nil) :: t()
+  @spec return_function_and_property(t(), String.t(), atom(), String.t(), atom() | nil) :: t()
   def return_function_and_property(context, function, alias, property, as \\ nil) do
     return_function_and_property(context, function, alias, property, as, false)
   end
 
-  @spec return_distinct(t(), atom(), String.t() | nil) :: t()
+  @spec return_distinct(t(), atom(), atom() | nil) :: t()
   def return_distinct(context, alias, as \\ nil) do
     return_function_and_property(context, nil, alias, nil, as, true)
   end
 
-  @spec return_distinct_property(t(), atom(), String.t(), String.t() | nil) :: t()
+  @spec return_distinct_property(t(), atom(), String.t(), atom() | nil) :: t()
   def return_distinct_property(context, alias, property, as \\ nil) do
     return_function_and_property(context, nil, alias, property, as, true)
   end
 
-  @spec return_distinct_function(t(), String.t(), atom(), String.t() | nil) :: t()
+  @spec return_distinct_function(t(), String.t(), atom(), atom() | nil) :: t()
   def return_distinct_function(context, function, alias, as \\ nil) do
     return_function_and_property(context, function, alias, nil, as, true)
   end
 
-  @spec return_distinct_function_and_property(t(), String.t(), atom(), String.t(), String.t() | nil) :: t()
+  @spec return_distinct_function_and_property(t(), String.t(), atom(), String.t(), atom() | nil) :: t()
   def return_distinct_function_and_property(context, function, alias, property, as \\ nil) do
     return_function_and_property(context, function, alias, property, as, true)
   end
@@ -765,15 +848,15 @@ defmodule RedisGraph.Query do
           String.t() | nil,
           atom(),
           String.t() | nil,
-          String.t() | nil,
+          atom() | nil,
           boolean()
         ) :: t()
   defp return_function_and_property(%{error: nil} = context, "", _alias, _property, _asc, _distinct) do
-    Map.put(context, :error, "Provide function name. E.g. new() |> match() |> node(:n) |> return(\"toUpper\", :n, \"age\") |> ...")
+    Map.put(context, :error, "Provide function name. E.g. new() |> match() |> node(:n) |> return_function(\"toUpper\", :n) |> ...")
   end
 
   defp return_function_and_property(%{error: nil} = context, _function, _alias, "", _asc, _distinct) do
-    Map.put(context, :error, "Provide property name. E.g. new() |> match() |> node(:n) |> return(\"toUpper\", :n, \"age\") |> ...")
+    Map.put(context, :error, "Provide property name. E.g. new() |> match() |> node(:n) |> return_property(:n, \"age\") |> ...")
   end
 
   defp return_function_and_property(%{error: nil} = context, function, alias, property, as, distinct) do
@@ -786,6 +869,14 @@ defmodule RedisGraph.Query do
       else
         context
       end
+
+    context =
+      if(is_nil(as) or is_atom(as)) do
+        context
+      else
+        Map.put(context, :error, "Provided as attribute: #{as} needs to be an atom. E.g. Query.new() |> Query.match() |> Query.node(:n) |> Query.return(:n, :Node) |> Query.build_query()")
+      end
+
     context = check_if_provided_alias_present(context, alias)
     context = check_if_match_ends_with_relationship(context)
     context = check_if_alias_is_atom(context, alias)
@@ -823,41 +914,39 @@ defmodule RedisGraph.Query do
     context
   end
 
-  @spec with(t(), atom(), String.t() | nil) :: t()
+  @spec with(t(), atom(), atom() | nil) :: t()
   def with(context, alias, as \\ nil) do
     with_function_and_property(context, nil, alias, nil, as)
   end
 
-  @spec with_property(t(), atom(), String.t(), String.t() | nil) :: t()
+  @spec with_property(t(), atom(), String.t(), atom() | nil) :: t()
   def with_property(context, alias, property, as \\ nil) do
     with_function_and_property(context, nil, alias, property, as)
   end
 
-  @spec with_function(t(), String.t(), atom(), String.t() | nil) :: t()
+  @spec with_function(t(), String.t(), atom(), atom() | nil) :: t()
   def with_function(context, function, alias, as \\ nil) do
     with_function_and_property(context, function, alias, nil, as)
   end
-
-  def with_function_and_property(context, function, alias, property, as \\ nil)
 
   @spec with_function_and_property(
           t(),
           String.t() | nil,
           atom(),
           String.t() | nil,
-          String.t() | nil
+          atom() | nil
         ) :: t()
+  def with_function_and_property(context, function, alias, property, as \\ nil)
 
   def with_function_and_property(%{error: nil} = context, "", _alias, _property, _as) do
-    Map.put(context, :error, "Provide function name. E.g. new() |> match() |> node(:n) |> with(\"toUpper\", :n, \"name\", \"Name\") |> return(\"Name\") |>...")
+    Map.put(context, :error, "Provide function name. E.g. new() |> match() |> node(:n) |> with_function_and_property(\"toUpper\", :n, \"name\", :Name) |> return(:Name) |>...")
   end
 
   def with_function_and_property(%{error: nil} = context, _function, _alias, "", _as) do
-    Map.put(context, :error, "Provide property name. E.g. new() |> match() |> node(:n) |> with(\"toUpper\", :n, \"name\", \"Name\") |> return(\"Name\") |> ...")
+    Map.put(context, :error, "Provide property name. E.g. new() |> match() |> node(:n) |> with_function_and_property(\"toUpper\", :n, \"name\", :Name) |> return(:Name) |> ...")
   end
 
   def with_function_and_property(%{error: nil} = context, function, alias, property, as) do
-    # add the variables from AS NewVariable into another map
     current_clause = Map.get(context, :current_clause)
 
     context =
@@ -872,17 +961,23 @@ defmodule RedisGraph.Query do
     provided_wildcard? = alias == :*
     variable_present? = Map.get(context, :variables, []) |> Enum.member?(alias)
     alias_present? =
-      Map.get(context, :edges, %{}) |> Map.has_key?(alias) or
+      Map.get(context, :relationships, %{}) |> Map.has_key?(alias) or
         Map.get(context, :nodes, %{}) |> Map.has_key?(alias)
     context =
       if((not provided_wildcard?) and (not alias_present?) and (not variable_present?)) do
         Map.put(
           context,
           :error,
-          "Provided alias: :#{alias} was not mentioned before. Pass the alias first: e.g. new() |> match() |> node(:n) |> with(:n, \"Node\") |> |> return(:n) ..."
+          "Provided alias: :#{alias} was not mentioned before. Pass the alias first: e.g. new() |> match() |> node(:n) |> with(:n, :Node) |> |> return(:n) ..."
         )
       else
         context
+      end
+    context =
+      if(is_nil(as) or is_atom(as)) do
+        context
+      else
+        Map.put(context, :error, "Provided as attribute: #{as} needs to be an atom. E.g. new() |> match() |> node(:n) |> with(:n, :Node) |> |> return(:n) ...")
       end
     context = check_if_match_ends_with_relationship(context)
     context = check_if_alias_is_atom(context, alias)
@@ -966,7 +1061,7 @@ defmodule RedisGraph.Query do
   defp set_property_on(context, alias, property, value, operator, on)
 
   defp set_property_on(%{error: nil} = context, _alias, "", _value, _operator, _on) do
-    Map.put(context, :error, "Provide property name. E.g. new() |> match() |> node(:n) |> set_property(:n, \"name\", \"Name\") |> return(:n) |> ...")
+    Map.put(context, :error, "Provide property name. E.g. new() |> match() |> node(:n) |> set_property(:n, \"name\", :Name) |> return(:n) |> ...")
   end
 
   defp set_property_on(%{error: nil} = context, alias, property, value, operator, on) do
@@ -1011,12 +1106,13 @@ defmodule RedisGraph.Query do
         context
       else
         merge_clause_present? = Map.get(context, :used_clauses, []) |> Enum.member?(:merge)
+        clause_to_string = (Atom.to_string(clause) |> String.replace("_", " ") |> String.upcase())
         context =
           if(not merge_clause_present?) do
             Map.put(
               context,
               :error,
-              "MERGE clause has to be provided first before using SET. E.g. new() |> merge() |> node(:n) |> node(:m) |> on_create_set(:n, \"m\") |> return(:n) |> ..."
+              "MERGE clause has to be provided first before using #{clause_to_string}. E.g. new() |> merge() |> node(:n) |> node(:m) |> on_create_set(:n, \"m\") |> return(:n) |> ..."
             )
           else
             context
@@ -1106,7 +1202,7 @@ defmodule RedisGraph.Query do
   @spec check_if_provided_alias_present(t(), atom()) :: t()
   defp check_if_provided_alias_present(%{error: nil} = context, alias) do
     alias_present? =
-      Map.get(context, :edges, %{}) |> Map.has_key?(alias) or
+      Map.get(context, :relationships, %{}) |> Map.has_key?(alias) or
         Map.get(context, :nodes, %{}) |> Map.has_key?(alias)
 
     variable_present? = Map.get(context, :variables, []) |> Enum.member?(alias)
@@ -1144,7 +1240,7 @@ defmodule RedisGraph.Query do
 
   @spec check_if_match_ends_with_relationship(t()) :: t()
   defp check_if_match_ends_with_relationship(%{error: nil} = context) do
-    if(is_struct(Map.get(context, :last_element), Edge)) do
+    if(is_struct(Map.get(context, :last_element), Relationship)) do
       Map.put(
         context,
         :error,
@@ -1219,7 +1315,7 @@ defmodule RedisGraph.Query do
           if((return_clause_present? or return_distinct_clause_present? or delete_clause_present?) and filtered_size_enough?) do
             context
           else
-            Map.put(context, :error, "In case you provide MATCH, OPTIONAL MATCH or DELETE - then RETURN or RETURN DISCTINCT also has to be provided. E.g. new() |> match |> node(:n) |> return(:n)")
+            Map.put(context, :error, "In case you provide MATCH, OPTIONAL MATCH - then RETURN, RETURN DISCTINCT or DELETE also has to be provided. E.g. new() |> match |> node(:n) |> return(:n)")
           end
         inner_context
       else
@@ -1236,7 +1332,7 @@ defmodule RedisGraph.Query do
     if(is_struct(context, __MODULE__)) do
       context
     else
-      new() |> Map.put(:error, "Please instantiate the query first with new(). Istead have e.g. new() |> match |> node(:n) |> return(:n) ...")
+      new() |> Map.put(:error, "Please instantiate the query first with new(). Istead have e.g. new() |> match |> node(:n) |> return(:n) |> build_query()")
     end
   end
 
