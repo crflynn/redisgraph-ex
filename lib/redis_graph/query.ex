@@ -1,4 +1,63 @@
 defmodule RedisGraph.Query do
+  @moduledoc """
+  Query module provides functions to build the cypther query for RedisGraph database.
+
+  The module exposes functions that represent entities (Node/Relationship)
+  and clauses (MATCH/WHERE/RETURN etc.) through which client can build
+  the desired query and pass it to RedisGraph.query/3 to interact with the database.
+  Internally Query structure holds the context, that contains data necessary when
+  building the actual query. The context shouldn't be altered by the client directly,
+  instead only public functions from this module should be, which would internally change it.
+
+  The query supports the following clauses: `CREATE, MATCH, OPTIONAL MATCH,
+  MERGE, DELETE, SET, ON MATCH SET, ON CREATE SET, WITH, WHERE, ORDER BY,
+  LIMIT, SKIP, RETURN`.
+
+  After building the query, you will end up with either `{:ok, query_message}`
+  or `{:error, error_message}`.
+
+  ## Examples
+  ```
+  # Creating a valid query
+  {:ok, query} =
+          Query.new()
+          |> Query.match()
+          |> Query.node(:n, ["Person"], %{age: 30, name: "John Doe", works: true})
+          |> Query.relationship_from_to(:r, "TRAVELS_TO", %{purpose: "pleasure"})
+          |> Query.node(:m, ["Place"], %{name: "Japan"})
+          |> Query.return(:n)
+          |> Query.return_property(:n, "age", :Age)
+          |> Query.return(:m)
+          |> Query.build_query()
+
+  # query will hold
+  # "MATCH "MATCH (n:Person {age: 30, name: 'John Doe', works: true})-[r:TRAVELS_TO {purpose: 'pleasure'}]->(m:Place {name: 'Japan'}) RETURN n, n.age AS Age, m"
+
+  # Creating an invalid query
+  {:error, error} =
+          Query.new() |> Query.match() |> Query.node(:n, ["Person"], %{age: 30, name: "John Doe", works: true}) |> Query.relationship_from_to(:r, "TRAVELS_TO", %{purpose: "pleasure"}) |> Query.node(:m, ["Place"], %{name: "Japan"}) |> Query.build_query()
+
+  # error will hold
+  # "In case you provide MATCH, OPTIONAL MATCH - then RETURN, RETURN DISCTINCT or DELETE also has to be provided. E.g. new() |> match |> node(:n) |> return(:n)"
+  ```
+
+  You will specify the node through node() and relationship through either relationship_from_to() or relationship_to_from().
+  ```
+  {:ok, query} = Query.new()
+                 |> Query.create()
+                 |> Query.node(:n, ["Person"])
+                 |> Query.relationship_from_to(:r, "TRAVELS_TO")
+                 |> Query.node(:m, ["City"])
+                 |> Query.relationship_from_to(:t, "IN")
+                 |> Query.node(:b, ["Country"])
+                 |> Query.relationship_to_from(:y, "HAS")
+                 |> Query.node(:v, ["Emperor"])
+                 |> Query.build_query()
+  # query would hold
+  # "CREATE (n:Person)-[r:TRAVELS_TO]->(m:City)-[t:IN]->(b:Country)<-[y:HAS]-(v:Emperor)"
+  ```
+  """
+
   alias RedisGraph.{Relationship, QueryBuilder}
 
   @type t() :: %__MODULE__{
@@ -85,6 +144,20 @@ defmodule RedisGraph.Query do
     struct(__MODULE__)
   end
 
+  @doc """
+  Add `MATCH` clause into the context and receive the updated context.
+  After match/1 provide the entities which you want to match using
+  node(), relationship_from_to, relationship_to_from() functions.
+
+  ## Example
+  ```
+  alias RedisGraph.{Query}
+
+  {:ok, query} = Query.new() |> Query.match() |> Query.node(:n, ["Person"], %{age: 30, name: "John"}) |> Query.return(:n) |> Query.build_query()
+  # query will hold
+  # "MATCH (n:Person {age: 30, name: 'John'}) RETURN n"
+  ```
+  """
   @spec match(t()) :: t()
   def match(%{error: nil} = context) do
     context = add_clause_if_not_present(context, :match)
@@ -101,6 +174,20 @@ defmodule RedisGraph.Query do
     context
   end
 
+  @doc """
+  Add `OPTIONAL MATCH` clause into the context and receive the updated context.
+  After optional_match/1 provide the entities which you want to match using
+  node(), relationship_from_to, relationship_to_from() functions.
+
+  ## Example
+  ```
+  alias RedisGraph.{Query}
+
+  {:ok, query} = Query.new() |> Query.optional_match() |> Query.node(:n, ["Person"], %{age: 30, name: "John"}) |> Query.return(:n) |> Query.build_query()
+  # query will hold
+  # "OPTIONAL MATCH (n:Person {age: 30, name: 'John'}) RETURN n"
+  ```
+  """
   @spec optional_match(t()) :: t()
   def optional_match(%{error: nil} = context) do
     context = add_clause_if_not_present(context, :optional_match)
@@ -117,6 +204,20 @@ defmodule RedisGraph.Query do
     context
   end
 
+  @doc """
+  Add `MERGE` clause into the context and receive the updated context.
+  After merge/1 provide the entities which you want to match using
+  node(), relationship_from_to, relationship_to_from() functions.
+
+  ## Example
+  ```
+  alias RedisGraph.{Query}
+
+  {:ok, query} = Query.new() |> Query.merge() |> Query.node(:n, ["Person"], %{age: 30, name: "John"}) |> Query.return(:n) |> Query.build_query()
+  # query will hold
+  # "MERGE (n:Person {age: 30, name: 'John'}) RETURN n"
+  ```
+  """
   @spec merge(t()) :: t()
   def merge(%{error: nil} = context) do
     context = add_clause_if_not_present(context, :merge)
@@ -133,6 +234,20 @@ defmodule RedisGraph.Query do
     context
   end
 
+  @doc """
+  Add `CREATE` clause into the context and receive the updated context.
+  After create/1 provide the entities which you want to match using
+  node(), relationship_from_to, relationship_to_from() functions.
+
+  ## Example
+  ```
+  alias RedisGraph.{Query}
+
+  {:ok, query} = Query.new() |> Query.create() |> Query.node(:n, ["Person"], %{age: 30, name: "John"}) |> Query.return(:n) |> Query.build_query()
+  # query will hold
+  # "CREATE (n:Person {age: 30, name: 'John'}) RETURN n"
+  ```
+  """
   @spec create(t()) :: t()
   def create(%{error: nil} = context) do
     context = add_clause_if_not_present(context, :create)
@@ -150,6 +265,28 @@ defmodule RedisGraph.Query do
   end
 
 
+  @doc """
+  Add `DELETE` clause into the context and receive the updated context.
+  Provide the `context` and `alias` (as atom) of the entity you want to delete.
+
+  ## Example
+  ```
+  alias RedisGraph.{Query}
+
+  {:ok, query} = Query.new() |> Query.match() |> Query.node(:n, ["Person"], %{age: 30, name: "John"}) |> Query.delete(:n) |> Query.build_query()
+  # query will hold
+  # "MATCH (n:Person {age: 30, name: 'John'}) DELETE n"
+  ```
+  If provided entity alias is was not mentioned before, the error will be persisted and
+  returned when the client will try to build the query.
+
+  ## Example
+  ```
+  {:error, query} = Query.new() |> Query.create() |> Query.node(:n, ["Person"], %{age: 30, name: "John"}) |> Query.delete(:m) |> Query.build_query()
+  # error will hold
+  # "Provided alias: :m was not mentioned before. Pass the alias first: e.g. new() |> match() |> node(:n) |> order_by_property(:n, \"age\") |> ..."
+  ```
+  """
   @spec delete(t(), atom()) :: t()
   def delete(%{error: nil} = context, alias) do
     current_clause = Map.get(context, :current_clause)
@@ -182,6 +319,33 @@ defmodule RedisGraph.Query do
     context
   end
 
+  @doc """
+  Add a Node to a clause and receive the updated context.
+  Provide the `context`, `alias` (as atom) of the node you want to add and a list of `labels` (as Strings) or a map of `properties`.
+  The function can be used along with `MATCH, OPTIONAL MATCH, CREATE, MERGE` clauses.
+
+  ## Example
+  ```
+  alias RedisGraph.{Query}
+
+  {:ok, query} = Query.new() |> Query.match() |> Query.node(:n, ["Person"]) |> Query.return(:n) |> Query.build_query()
+  # query will hold
+  # "MATCH (n:Person) RETURN n"
+
+  {:ok, query} = Query.new() |> Query.match() |> Query.node(:n, %{age: 30, name: "John"}) |> Query.return(:n) |> Query.build_query()
+  # query will hold
+  # "MATCH (n {age: 30, name: 'John'}) RETURN n"
+  ```
+  If the client uses the function incorrectly, the error will be persisted and
+  returned when the client will try to build the query.
+
+  ## Example
+  ```
+  {:error, query} = Query.new() |> Query.node(:n, ["Person"]) |> Query.return(:n) |> Query.build_query()
+  # error will hold
+  # "MATCH or OPTIONAL MATCH or CREATE or MERGE clause has to be provided first before using node(). E.g. new() |> match() |> node(:n) |> ..."
+  ```
+  """
   @spec node(t(), atom(), list(String.t())) :: t()
   def node(%{error: nil} = context, alias, labels) when is_list(labels) do
     node(context, alias, labels, %{})
@@ -192,6 +356,29 @@ defmodule RedisGraph.Query do
     node(context, alias, [], properties)
   end
 
+  @doc """
+  Add a Node to a clause and receive the updated context.
+  Provide the `context`, `alias` (as atom) of the node you want to add, a list of `labels` (as Strings) and a map of `properties`.
+  The function can be used along with `MATCH, OPTIONAL MATCH, CREATE, MERGE` clauses.
+
+  ## Example
+  ```
+  alias RedisGraph.{Query}
+
+  {:ok, query} = Query.new() |> Query.match() |> Query.node(:n, ["Person"], %{age: 30, name: "John"}) |> Query.return(:n) |> Query.build_query()
+  # query will hold
+  # "MATCH (n:Person {age: 30, name: 'John'}) RETURN n"
+  ```
+  If the client uses the function incorrectly, the error will be persisted and
+  returned when the client will try to build the query.
+
+  ## Example
+  ```
+  {:error, query} = Query.new() |> Query.node(:n, ["Person"], %{age: 30, name: "John"}) |> Query.return(:n) |> Query.build_query()
+  # error will hold
+  # "MATCH or OPTIONAL MATCH or CREATE or MERGE clause has to be provided first before using node(). E.g. new() |> match() |> node(:n) |> ..."
+  ```
+  """
   @spec node(t(), atom(), list(String.t()), map()) :: t()
   def node(context, alias, labels \\ [], properties \\ %{})
 
@@ -282,11 +469,65 @@ defmodule RedisGraph.Query do
     relationship_from_to(context, alias, type, %{})
   end
 
+  @doc """
+  Add a Relationship to a clause and receive the updated context.
+  Provide the `context`, `alias` (as atom) of the relationship you want to add and a `type` (as Strings) or a map of `properties`.
+  The function can be used along with `MATCH, OPTIONAL MATCH, CREATE, MERGE` clauses.
+
+  relationship_from_to() will convert to `(:from_node)-[:rel]->(:to_node)`
+
+  ## Example
+  ```
+  alias RedisGraph.{Query}
+
+  {:ok, query} = Query.new() |>  Query.match |> Query.node(:n) |> Query.relationship_from_to(:r, "KNOWS") |> Query.node(:m) |> Query.return(:n) |> Query.build_query()
+  # query will hold
+  # "MATCH (n)-[r:KNOWS]->(m) RETURN n"
+
+  {:ok, query} = Query.new() |>  Query.match |> Query.node(:n) |> Query.relationship_from_to(:r, %{duration: 100}) |> Query.node(:m) |> Query.return(:n) |> Query.build_query()
+  # query will hold
+  # "MATCH (n)-[r {duration: 100}]->(m) RETURN n"
+  ```
+  If the client uses the function incorrectly, the error will be persisted and
+  returned when the client will try to build the query.
+
+  ## Example
+  ```
+  {:error, query} = Query.new() |>  Query.match |> Query.node(:n) |> Query.relationship_from_to(:r, %{duration: 100}) |> Query.return(:n) |> Query.build_query()
+  # error will hold
+  # "MATCH clause cannot end with a Relationship, add a Node at the end. E.g. new() |> match() |> node(:n) |> relationship_from_to(:r) |> node(:m) |> ..."
+  ```
+  """
   @spec relationship_from_to(t(), atom(), map()) :: t()
   def relationship_from_to(%{error: nil} = context, alias, properties) when is_map(properties) do
     relationship_from_to(context, alias, "", properties)
   end
 
+  @doc """
+  Add a Relationship to a clause and receive the updated context.
+  Provide the `context`, `alias` (as atom) of the relationship you want to add, a `type` (as Strings) or a map of `properties`.
+  The function can be used along with `MATCH, OPTIONAL MATCH, CREATE, MERGE` clauses.
+
+  relationship_from_to() will convert to `(:from_node)-[:rel]->(:to_node)`
+
+  ## Example
+  ```
+  alias RedisGraph.{Query}
+
+  {:ok, query} = Query.new() |>  Query.match |> Query.node(:n) |> Query.relationship_from_to(:r, "TRAVELS", %{duration: 100}) |> Query.node(:m) |> Query.return(:n) |> Query.build_query()
+  # query will hold
+  # "MATCH (n)-[r:TRAVELS {duration: 100}]->(m) RETURN n"
+  ```
+  If the client uses the function incorrectly, the error will be persisted and
+  returned when the client will try to build the query.
+
+  ## Example
+  ```
+  {:error, query} = Query.new() |>  Query.match |> Query.node(:n) |> Query.relationship_from_to(:r, "TRAVELS", %{duration: 100}) |> Query.return(:n) |> Query.build_query()
+  # error will hold
+  # "MATCH clause cannot end with a Relationship, add a Node at the end. E.g. new() |> match() |> node(:n) |> relationship_from_to(:r) |> node(:m) |> ..."
+  ```
+  """
   @spec relationship_from_to(t(), atom(), String.t(), map()) :: t()
   def relationship_from_to(context, alias, type \\ "", properties \\ %{})
 
@@ -380,6 +621,36 @@ defmodule RedisGraph.Query do
     context
   end
 
+
+  @doc """
+  Add a Relationship to a clause and receive the updated context.
+  Provide the `context`, `alias` (as atom) of the relationship you want to add and a `type` (as Strings) or a map of `properties`.
+  The function can be used along with `MATCH, OPTIONAL MATCH, CREATE, MERGE` clauses.
+
+  relationship_to_from() will convert to `(:to_node)<-[:rel]-(:from_node)`
+
+  ## Example
+  ```
+  alias RedisGraph.{Query}
+
+  {:ok, query} = Query.new() |>  Query.match |> Query.node(:n) |> Query.relationship_to_from(:r, "KNOWS") |> Query.node(:m) |> Query.return(:n) |> Query.build_query()
+  # query will hold
+  # "MATCH (n)<-[r:KNOWS]-(m) RETURN n"
+
+  {:ok, query} = Query.new() |>  Query.match |> Query.node(:n) |> Query.relationship_to_from(:r, %{duration: 100}) |> Query.node(:m) |> Query.return(:n) |> Query.build_query()
+  # query will hold
+  # "MATCH (n)<-[r {duration: 100}]-(m) RETURN n"
+  ```
+  If the client uses the function incorrectly, the error will be persisted and
+  returned when the client will try to build the query.
+
+  ## Example
+  ```
+  {:error, query} = Query.new() |>  Query.match |> Query.node(:n) |> Query.relationship_to_from(:r, %{duration: 100}) |> Query.return(:n) |> Query.build_query()
+  # error will hold
+  # "MATCH clause cannot end with a Relationship, add a Node at the end. E.g. new() |> match() |> node(:n) |> relationship_from_to(:r) |> node(:m) |> ..."
+  ```
+  """
   @spec relationship_to_from(t(), atom(), String.t()) :: t()
   def relationship_to_from(%{error: nil} = context, alias, type) when is_binary(type) do
     relationship_to_from(context, alias, type, %{})
@@ -390,6 +661,31 @@ defmodule RedisGraph.Query do
     relationship_to_from(context, alias, "", properties)
   end
 
+  @doc """
+  Add a Relationship to a clause and receive the updated context.
+  Provide the `context`, `alias` (as atom) of the relationship you want to add, a `type` (as Strings) or a map of `properties`.
+  The function can be used along with `MATCH, OPTIONAL MATCH, CREATE, MERGE` clauses.
+
+  relationship_to_from() will convert to `(:to_node)<-[:rel]-(:from_node)`
+
+  ## Example
+  ```
+  alias RedisGraph.{Query}
+
+  {:ok, query} = Query.new() |>  Query.match |> Query.node(:n) |> Query.relationship_to_from(:r, "TRAVELS", %{duration: 100}) |> Query.node(:m) |> Query.return(:n) |> Query.build_query()
+  # query will hold
+  # "MATCH (n)<-[r:TRAVELS {duration: 100}]-(m) RETURN n"
+  ```
+  If the client uses the function incorrectly, the error will be persisted and
+  returned when the client will try to build the query.
+
+  ## Example
+  ```
+  {:error, query} = Query.new() |>  Query.match |> Query.node(:n) |> Query.relationship_to_from(:r, "TRAVELS", %{duration: 100}) |> Query.return(:n) |> Query.build_query()
+  # error will hold
+  # "MATCH clause cannot end with a Relationship, add a Node at the end. E.g. new() |> match() |> node(:n) |> relationship_from_to(:r) |> node(:m) |> ..."
+  ```
+  """
   @spec relationship_to_from(t(), atom(), String.t(), map()) :: t()
   def relationship_to_from(context, alias, type \\ "", properties \\ %{})
 
@@ -483,6 +779,53 @@ defmodule RedisGraph.Query do
     context
   end
 
+  @doc """
+  Add `WHERE` clause into the context and receive the updated context.
+  Provide the `context`, `alias` (as atom) of the entity you want to filter on,
+  a `property` for the given entity, a single `operator` (as atom) and a `value`.
+
+  Supported values(on the left) and operators (on the left):
+  - type `String` -> provide `:equals, :not_equal, :bigger, :bigger_or_equal, :smaller, :smaller_or_equal, :starts_with, :ends_with, :contains`
+  - type `number` -> `:equals, :not_equal, :bigger, :bigger_or_equal, :smaller, :smaller_or_equal`
+  - type `boolean` -> `:equals`
+  - type `nil` -> `:is, :is_not`
+  - type `list` -> `:in`
+
+  The operator will be converted to:
+  - :equals -> "="
+  - :not_equal -> "<>"
+  - :bigger -> ">"
+  - :bigger_or_equal -> ">="
+  - :smaller -> "<"
+  - :smaller_or_equal -> "<="
+  - :starts_with -> "STARTS WITH"
+  - :ends_with -> "ENDS WITH"
+  - :contains -> "CONTAINS"
+  - :in -> "IN"
+  - :is -> "IS"
+  - :is_not -> "IS NOT
+
+  where() can be used just once. If you want to have several conditions in `WHERE` clause, use
+  where() along with other functions, such as or_where()/or_not_where() etc.
+
+  ## Example
+  ```
+  alias RedisGraph.{Query}
+
+  {:ok, query} = Query.new() |> Query.match() |> Query.node(:n) |> Query.where(:n, "age", :bigger, 5) |> Query.return(:n) |> Query.build_query()
+  # query will hold
+  # "MATCH (n) WHERE n.age > 5 RETURN n"
+  ```
+  If the client uses the function incorrectly, the error will be persisted and
+  returned when the client will try to build the query.
+
+  ## Example
+  ```
+  {:error, query} = Query.new() |> Query.match() |> Query.node(:n) |> Query.where(:n, "age", :test, 5) |> Query.return(:n) |> Query.build_query()
+  # error will hold
+  # "Provided value: 5 or/and operator: :test in the WHERE clause is not supported."
+  ```
+  """
   @spec where(
           t(),
           atom(),
@@ -582,6 +925,34 @@ defmodule RedisGraph.Query do
     context
   end
 
+  @doc """
+  Add `WHERE NOT` clause into the context and receive the updated context.
+  Provide the `context`, `alias` (as atom) of the entity you want to filter on,
+  a `property` for the given entity, a single `operator` (as atom) and a `value`.
+
+  Check where() to see the supported values and operators.
+
+  where_not() can be used just once. If you want to have several conditions in `WHERE` clause, use
+  where_not() along with other functions, such as or_where()/or_not_where() etc.
+
+  ## Example
+  ```
+  alias RedisGraph.{Query}
+
+  {:ok, query} = Query.new() |> Query.match() |> Query.node(:n) |> Query.where_not(:n, "age", :bigger, 5) |> Query.return(:n) |> Query.build_query()
+  # query will hold
+  # "MATCH (n) WHERE NOT n.age > 5 RETURN n"
+  ```
+  If the client uses the function incorrectly, the error will be persisted and
+  returned when the client will try to build the query.
+
+  ## Example
+  ```
+  {:error, query} = Query.new() |> Query.match() |> Query.node(:n) |> Query.where_not(:n, "age", :test, 5) |> Query.return(:n) |> Query.build_query()
+  # error will hold
+  # "Provided value: 5 or/and operator: :test in the WHERE clause is not supported."
+  ```
+  """
   @spec where_not(
           t(),
           atom(),
@@ -593,6 +964,33 @@ defmodule RedisGraph.Query do
     where(context, alias, property, operator, value, :not)
   end
 
+  @doc """
+  Add `WHERE ... OR ...` clause into the context and receive the updated context.
+  Provide the `context`, `alias` (as atom) of the entity you want to filter on,
+  a `property` for the given entity, a single `operator` (as atom) and a `value`.
+
+  Check where() to see the supported values and operators.
+
+  or_where() is used when you want to have several logical conditions is `WHERE` clause,
+  so where()/where_not() already needs to present as well.
+  ## Example
+  ```
+  alias RedisGraph.{Query}
+
+  {:ok, query} = Query.new() |> Query.match() |> Query.node(:n) |> Query.where(:n, "age", :bigger, 5) |> Query.or_where(:n, "name", :contains, "A") |> Query.return(:n) |> Query.build_query()
+  # query will hold
+  # "MATCH (n) WHERE n.age > 5 OR n.name CONTAINS 'A' RETURN n"
+  ```
+  If the client uses the function incorrectly, the error will be persisted and
+  returned when the client will try to build the query.
+
+  ## Example
+  ```
+  {:error, query} = Query.new() |> Query.match() |> Query.node(:n) |> Query.where(:n, "age", :bigger, 5) |> Query.or_where(:n, "name", :test, "A") |> Query.return(:n) |> Query.build_query()
+  # error will hold
+  # "Provided value: 5 or/and operator: :test in the WHERE clause is not supported."
+  ```
+  """
   @spec or_where(
           t(),
           atom(),
@@ -604,6 +1002,33 @@ defmodule RedisGraph.Query do
     where(context, alias, property, operator, value, :or)
   end
 
+  @doc """
+  Add `WHERE ... AND ...` clause into the context and receive the updated context.
+  Provide the `context`, `alias` (as atom) of the entity you want to filter on,
+  a `property` for the given entity, a single `operator` (as atom) and a `value`.
+
+  Check where() to see the supported values and operators.
+
+  and_where() is used when you want to have several logical conditions is `WHERE` clause,
+  so where()/where_not() already needs to present as well.
+  ## Example
+  ```
+  alias RedisGraph.{Query}
+
+  {:ok, query} = Query.new() |> Query.match() |> Query.node(:n) |> Query.where(:n, "age", :bigger, 5) |> Query.and_where(:n, "name", :contains, "A") |> Query.return(:n) |> Query.build_query()
+  # query will hold
+  # "MATCH (n) WHERE n.age > 5 AND n.name CONTAINS 'A' RETURN n"
+  ```
+  If the client uses the function incorrectly, the error will be persisted and
+  returned when the client will try to build the query.
+
+  ## Example
+  ```
+  {:error, query} = Query.new() |> Query.match() |> Query.node(:n) |> Query.where(:n, "age", :bigger, 5) |> Query.and_where(:n, "name", :test, "A") |> Query.return(:n) |> Query.build_query()
+  # error will hold
+  # "Provided value: 5 or/and operator: :test in the WHERE clause is not supported."
+  ```
+  """
   @spec and_where(
           t(),
           atom(),
@@ -615,6 +1040,33 @@ defmodule RedisGraph.Query do
     where(context, alias, property, operator, value, :and)
   end
 
+  @doc """
+  Add `WHERE ... XOR ...` clause into the context and receive the updated context.
+  Provide the `context`, `alias` (as atom) of the entity you want to filter on,
+  a `property` for the given entity, a single `operator` (as atom) and a `value`.
+
+  Check where() to see the supported values and operators.
+
+  xor_where() is used when you want to have several logical conditions is `WHERE` clause,
+  so where()/where_not() already needs to present as well.
+  ## Example
+  ```
+  alias RedisGraph.{Query}
+
+  {:ok, query} = Query.new() |> Query.match() |> Query.node(:n) |> Query.where(:n, "age", :bigger, 5) |> Query.xor_where(:n, "name", :contains, "A") |> Query.return(:n) |> Query.build_query()
+  # query will hold
+  # "MATCH (n) WHERE n.age > 5 XOR n.name CONTAINS 'A' RETURN n"
+  ```
+  If the client uses the function incorrectly, the error will be persisted and
+  returned when the client will try to build the query.
+
+  ## Example
+  ```
+  {:error, query} = Query.new() |> Query.match() |> Query.node(:n) |> Query.where(:n, "age", :bigger, 5) |> Query.xor_where(:n, "name", :test, "A") |> Query.return(:n) |> Query.build_query()
+  # error will hold
+  # "Provided value: 5 or/and operator: :test in the WHERE clause is not supported."
+  ```
+  """
   @spec xor_where(
           t(),
           atom(),
@@ -626,6 +1078,33 @@ defmodule RedisGraph.Query do
     where(context, alias, property, operator, value, :xor)
   end
 
+  @doc """
+  Add `WHERE ... OR NOT ...` clause into the context and receive the updated context.
+  Provide the `context`, `alias` (as atom) of the entity you want to filter on,
+  a `property` for the given entity, a single `operator` (as atom) and a `value`.
+
+  Check where() to see the supported values and operators.
+
+  or_not_where() is used when you want to have several logical conditions is `WHERE` clause,
+  so where()/where_not() already needs to present as well.
+  ## Example
+  ```
+  alias RedisGraph.{Query}
+
+  {:ok, query} = Query.new() |> Query.match() |> Query.node(:n) |> Query.where(:n, "age", :bigger, 5) |> Query.or_not_where(:n, "name", :contains, "A") |> Query.return(:n) |> Query.build_query()
+  # query will hold
+  # "MATCH (n) WHERE n.age > 5 OR NOT n.name CONTAINS 'A' RETURN n"
+  ```
+  If the client uses the function incorrectly, the error will be persisted and
+  returned when the client will try to build the query.
+
+  ## Example
+  ```
+  {:error, query} = Query.new() |> Query.match() |> Query.node(:n) |> Query.where(:n, "age", :bigger, 5) |> Query.or_not_where(:n, "name", :test, "A") |> Query.return(:n) |> Query.build_query()
+  # error will hold
+  # "Provided value: 5 or/and operator: :test in the WHERE clause is not supported."
+  ```
+  """
   @spec or_not_where(
   t(),
   atom(),
@@ -637,6 +1116,33 @@ defmodule RedisGraph.Query do
     where(context, alias, property, operator, value, :or_not)
   end
 
+  @doc """
+  Add `WHERE ... AND NOT ...` clause into the context and receive the updated context.
+  Provide the `context`, `alias` (as atom) of the entity you want to filter on,
+  a `property` for the given entity, a single `operator` (as atom) and a `value`.
+
+  Check where() to see the supported values and operators.
+
+  and_not_where() is used when you want to have several logical conditions is `WHERE` clause,
+  so where()/where_not() already needs to present as well.
+  ## Example
+  ```
+  alias RedisGraph.{Query}
+
+  {:ok, query} = Query.new() |> Query.match() |> Query.node(:n) |> Query.where(:n, "age", :bigger, 5) |> Query.and_not_where(:n, "name", :contains, "A") |> Query.return(:n) |> Query.build_query()
+  # query will hold
+  # "MATCH (n) WHERE n.age > 5 AND NOT n.name CONTAINS 'A' RETURN n"
+  ```
+  If the client uses the function incorrectly, the error will be persisted and
+  returned when the client will try to build the query.
+
+  ## Example
+  ```
+  {:error, query} = Query.new() |> Query.match() |> Query.node(:n) |> Query.where(:n, "age", :bigger, 5) |> Query.and_not_where(:n, "name", :test, "A") |> Query.return(:n) |> Query.build_query()
+  # error will hold
+  # "Provided value: 5 or/and operator: :test in the WHERE clause is not supported."
+  ```
+  """
   @spec and_not_where(
           t(),
           atom(),
@@ -648,6 +1154,33 @@ defmodule RedisGraph.Query do
     where(context, alias, property, operator, value, :and_not)
   end
 
+  @doc """
+  Add `WHERE ... XOR NOT ...` clause into the context and receive the updated context.
+  Provide the `context`, `alias` (as atom) of the entity you want to filter on,
+  a `property` for the given entity, a single `operator` (as atom) and a `value`.
+
+  Check where() to see the supported values and operators.
+
+  xor_not_where() is used when you want to have several logical conditions is `WHERE` clause,
+  so where()/where_not() already needs to present as well.
+  ## Example
+  ```
+  alias RedisGraph.{Query}
+
+  {:ok, query} = Query.new() |> Query.match() |> Query.node(:n) |> Query.where(:n, "age", :bigger, 5) |> Query.xor_not_where(:n, "name", :contains, "A") |> Query.return(:n) |> Query.build_query()
+  # query will hold
+  # "MATCH (n) WHERE n.age > 5 XOR NOT n.name CONTAINS 'A' RETURN n"
+  ```
+  If the client uses the function incorrectly, the error will be persisted and
+  returned when the client will try to build the query.
+
+  ## Example
+  ```
+  {:error, query} = Query.new() |> Query.match() |> Query.node(:n) |> Query.where(:n, "age", :bigger, 5) |> Query.xor_not_where(:n, "name", :test, "A") |> Query.return(:n) |> Query.build_query()
+  # error will hold
+  # "Provided value: 5 or/and operator: :test in the WHERE clause is not supported."
+  ```
+  """
   @spec xor_not_where(
           t(),
           atom(),
@@ -666,6 +1199,30 @@ defmodule RedisGraph.Query do
     Map.put(context, :error, "Provide property name. E.g. new() |> match() |> node(:n) |> order_by(:n, \"age\") |> return(:n) |> ...")
   end
 
+  @doc """
+  Add `ORDER BY` clause into the context and receive the updated context.
+  Provide the `context`, `alias` (as atom) of the entity, a `property`
+  for the given entity on which you want to order and a `asc` boolean
+  (if set to `true`, the order is ASC and if `false`, order is DESC).
+
+  ## Example
+  ```
+  alias RedisGraph.{Query}
+
+  {:ok, query} = Query.new() |> Query.match() |> Query.node(:n) |> Query.return(:n) |> Query.order_by(:n, "age") |> Query.build_query()
+  # query will hold
+  # "MATCH (n) RETURN n ORDER BY n.age ASC"
+  ```
+  If the client uses the function incorrectly, the error will be persisted and
+  returned when the client will try to build the query.
+
+  ## Example
+  ```
+  {:error, query} = Query.new() |> Query.match() |> Query.node(:n) |> Query.return(:n) |> Query.order_by(:n, "") |> Query.build_query()
+  # error will hold
+  # "Provide property name. E.g. new() |> match() |> node(:n) |> order_by(:n, \"age\") |> return(:n) |> ..."
+  ```
+  """
   def order_by(%{error: nil} = context, alias, property, asc) when is_binary(property) do
     current_clause = Map.get(context, :current_clause)
 
@@ -764,6 +1321,28 @@ defmodule RedisGraph.Query do
     context
   end
 
+  @doc """
+  Add `SKIP` clause into the context and receive the updated context.
+  Provide the `context` and `number` of rows you want to skip.
+
+  ## Example
+  ```
+  alias RedisGraph.{Query}
+
+  {:ok, query} = Query.new() |> Query.match() |> Query.node(:n) |> Query.return(:n) |> Query.skip(10)|> Query.build_query()
+  # query will hold
+  # "MATCH (n) RETURN n SKIP 10"
+  ```
+  If the client uses the function incorrectly, the error will be persisted and
+  returned when the client will try to build the query.
+
+  ## Example
+  ```
+  {:error, query} = Query.new() |> Query.match() |> Query.node(:n) |> Query.return(:n) |> Query.skip("test")|> Query.build_query()
+  # error will hold
+  # "Wrong number parameter was probided, only non negatibe integers supported. E.g. new() |> match() |> node(:n) |> return(:n) |> skip(10)|> build_query()"
+  ```
+  """
   @spec skip(t(), non_neg_integer()) :: t()
   def skip(%{error: nil} = context, number) do
     current_clause = Map.get(context, :current_clause)
@@ -803,41 +1382,179 @@ defmodule RedisGraph.Query do
     context
   end
 
+  @doc """
+  Add `RETURN` clause into the context and receive the updated context.
+  Provide the `context`, `alias` (as atom) of the entity you want to return
+  and an atom `as` that would hold the new name of the result.
+
+  ## Example
+  ```
+  alias RedisGraph.{Query}
+
+  {:ok, query} = Query.new() |> Query.match() |> Query.node(:n, ["Person"]) |> Query.return(:n, :Person) |> Query.build_query()
+  # query will hold
+  # "MATCH (n:Person) RETURN n AS Person"
+
+  {:ok, query} = Query.new() |> Query.match() |> Query.node(:n, ["Person"]) |> Query.node(:m, ["Dog"]) |> Query.return(:n) |> Query.return(:m) |> Query.build_query()
+  # query will hold
+  # "MATCH (n:Person),(m:Dog) RETURN n, m"
+  ```
+  If the client uses the function incorrectly, the error will be persisted and
+  returned when the client will try to build the query.
+
+  ## Example
+  ```
+  {:error, query} = Query.new() |> Query.match() |> Query.node(:n, ["Person"]) |> Query.return(:m) |> Query.build_query()
+  # error will hold
+  # "Provided alias: :m was not mentioned before. Pass the alias first: e.g. new() |> match() |> node(:n) |> order_by_property(:n, \"age\") |> ..."
+  ```
+  """
   @spec return(t(), atom(), atom() | nil) :: t()
   def return(context, alias, as \\ nil) do
     return_function_and_property(context, nil, alias, nil, as, false)
   end
 
+  @doc """
+  Add `RETURN` clause into the context and receive the updated context.
+  Provide the `context`, `alias` (as atom) of the entity, name of the `property`
+  you want to return and an atom `as` that would hold the new name of the result.
+
+  ## Example
+  ```
+  alias RedisGraph.{Query}
+
+  {:ok, query} = Query.new() |> Query.match() |> Query.node(:n, ["Person"]) |> Query.return_property(:n,"age", :Person) |> Query.build_query()
+  # query will hold
+  # "MATCH (n:Person) RETURN n.age AS Person"
+
+  {:ok, query} = Query.new() |> Query.match() |> Query.node(:n, ["Person"]) |> Query.return(:n) |> Query.return_property(:n, "age") |> Query.build_query()
+  # query will hold
+  # "MATCH (n:Person) RETURN n, n.age"
+  ```
+  If the client uses the function incorrectly, the error will be persisted and
+  returned when the client will try to build the query.
+
+  ## Example
+  ```
+  {:error, query} = Query.new() |> Query.match() |> Query.node(:n, ["Person"]) |> Query.return_property(:m, "") |> Query.build_query()
+  # error will hold
+  # "Provide property name. E.g. new() |> match() |> node(:n) |> return_property(:n, \"age\") |> ..."
+  ```
+  """
   @spec return_property(t(), atom(), String.t(), atom() | nil) :: t()
   def return_property(context, alias, property, as \\ nil) do
     return_function_and_property(context, nil, alias, property, as, false)
   end
 
+  @doc """
+  Add `RETURN` clause into the context and receive the updated context.
+  Provide the `context`, name of the `function` which should be called,
+  `alias` (as atom) of the entity you want to return and and atom
+  `as` that would hold the new name of the result.
+
+  ## Example
+  ```
+  alias RedisGraph.{Query}
+
+  {:ok, query} = Query.new() |> Query.match() |> Query.node(:n, ["Person"]) |> Query.return_property(:n,"age", :Person) |> Query.build_query()
+  # query will hold
+  # "MATCH (n) RETURN n, labels(n) AS Labels"
+
+  {:ok, query} = Query.new() |> Query.match() |> Query.node(:n) |> Query.return(:n) |> Query.return_function("labels", :n, :Labels) |> Query.build_query()
+  # query will hold
+  # "MATCH (n) RETURN n, labels(n) AS Labels"
+  ```
+  If the client uses the function incorrectly, the error will be persisted and
+  returned when the client will try to build the query.
+
+  ## Example
+  ```
+  {:error, query} = Query.new() |> Query.match() |> Query.node(:n) |> Query.return(:n) |> Query.return_function("", :n, :Labels) |> Query.build_query()
+  # error will hold
+  # "Provide function name. E.g. new() |> match() |> node(:n) |> return_function(\"toUpper\", :n) |> ..."
+  ```
+  """
   @spec return_function(t(), String.t(), atom(), atom() | nil) :: t()
   def return_function(context, function, alias, as \\ nil) do
     return_function_and_property(context, function, alias, nil, as, false)
   end
 
+  @doc """
+  Add `RETURN` clause into the context and receive the updated context.
+  Provide the `context`, name of the `function` which should be called,
+  `alias` (as atom) of the entity, name of the `property` you want to return
+  and and atom `as` that would hold the new name of the result.
+
+  ## Example
+  ```
+  alias RedisGraph.{Query}
+
+  {:ok, query} = Query.new() |> Query.match() |> Query.node(:n) |> Query.return(:n) |> Query.return_function_and_property("toUpper", :n, "name", :Name) |> Query.build_query()
+  # query will hold
+  # "MATCH (n) RETURN n, toUpper(n.name) AS Name"
+
+  ```
+  If the client uses the function incorrectly, the error will be persisted and
+  returned when the client will try to build the query.
+
+  ## Example
+  ```
+  {:error, query} =Query.new() |> Query.match() |> Query.node(:n) |> Query.return(:n) |> Query.return_function_and_property("toUpper", :n, "name", "Name") |> Query.build_query()
+  # error will hold
+  # ""Provided as attribute: Name needs to be an atom. E.g. Query.new() |> Query.match() |> Query.node(:n) |> Query.return(:n, :Node) |> Query.build_query()"
+  ```
+  """
   @spec return_function_and_property(t(), String.t(), atom(), String.t(), atom() | nil) :: t()
   def return_function_and_property(context, function, alias, property, as \\ nil) do
     return_function_and_property(context, function, alias, property, as, false)
   end
 
+  @doc """
+  Add `RETURN DISTINCT` clause into the context and receive the updated context.
+  Provide the `context`, `alias` (as atom) of the entity you want to return
+  and an atom `as` that would hold the new name of the result.
+
+
+  Look at return() for examples
+  """
   @spec return_distinct(t(), atom(), atom() | nil) :: t()
   def return_distinct(context, alias, as \\ nil) do
     return_function_and_property(context, nil, alias, nil, as, true)
   end
 
+  @doc """
+  Add `RETURN DISTINCT` clause into the context and receive the updated context.
+  Provide the `context`, `alias` (as atom) of the entity, name of the `property`
+  you want to return and an atom `as` that would hold the new name of the result.
+
+  Look at return_property() for examples
+  """
   @spec return_distinct_property(t(), atom(), String.t(), atom() | nil) :: t()
   def return_distinct_property(context, alias, property, as \\ nil) do
     return_function_and_property(context, nil, alias, property, as, true)
   end
 
+  @doc """
+  Add `RETURN DISTINCT` clause into the context and receive the updated context.
+  Provide the `context`, name of the `function` which should be called,
+  `alias` (as atom) of the entity you want to return and and atom
+  `as` that would hold the new name of the result.
+
+  Look at return_function() for examples
+  """
   @spec return_distinct_function(t(), String.t(), atom(), atom() | nil) :: t()
   def return_distinct_function(context, function, alias, as \\ nil) do
     return_function_and_property(context, function, alias, nil, as, true)
   end
 
+  @doc """
+  Add `RETURN DISTINCT` clause into the context and receive the updated context.
+  Provide the `context`, name of the `function` which should be called,
+  `alias` (as atom) of the entity, name of the `property` you want to return
+  and and atom `as` that would hold the new name of the result.
+
+  Look at return_function_and_property() for examples
+  """
   @spec return_distinct_function_and_property(t(), String.t(), atom(), String.t(), atom() | nil) :: t()
   def return_distinct_function_and_property(context, function, alias, property, as \\ nil) do
     return_function_and_property(context, function, alias, property, as, true)
@@ -914,21 +1631,123 @@ defmodule RedisGraph.Query do
     context
   end
 
+  @doc """
+  Add `WITH` clause into the context and receive the updated context.
+  Provide the `context`, `alias` (as atom) of the entity you want to chain
+  and an atom `as` that would hold the new name of the result.
+
+  ## Example
+  ```
+  alias RedisGraph.{Query}
+
+  {:ok, query} =  Query.new() |> Query.match() |> Query.node(:n) |> Query.with(:n, :Node) |> Query.return(:Node) |> Query.build_query()
+  # query will hold
+  # "MATCH (n) WITH n AS Node RETURN Node"
+
+  ```
+  If the client uses the function incorrectly, the error will be persisted and
+  returned when the client will try to build the query.
+
+  ## Example
+  ```
+  {:error, query} = Query.new() |> Query.match() |> Query.node(:n) |> Query.with(:m, :Node) |> Query.return(:Node) |> Query.build_query()
+  # error will hold
+  # "Provided alias: :m was not mentioned before. Pass the alias first: e.g. new() |> match() |> node(:n) |> with(:n, :Node) |> |> return(:n) ..."
+  ```
+  """
   @spec with(t(), atom(), atom() | nil) :: t()
   def with(context, alias, as \\ nil) do
     with_function_and_property(context, nil, alias, nil, as)
   end
 
+  @doc """
+  Add `WITH` clause into the context and receive the updated context.
+  Provide the `context`, `alias` (as atom) of the entity, name of the `property`
+  you want to return and an atom `as` that would hold the new name of the result.
+
+  ## Example
+  ```
+  alias RedisGraph.{Query}
+
+  {:ok, query} =  Query.new() |> Query.match() |> Query.node(:n) |> Query.with_property(:n,"age", :Age) |> Query.return(:Age) |> Query.build_query()
+  # query will hold
+  # "MATCH (n) WITH n.age AS Age RETURN Age"
+
+  ```
+  If the client uses the function incorrectly, the error will be persisted and
+  returned when the client will try to build the query.
+
+  ## Example
+  ```
+  {:error, query} = Query.new() |> Query.match() |> Query.node(:n) |> Query.with_property(:m,"age", :Age) |> Query.return(:Node) |> Query.build_query()
+  # error will hold
+  # "Provided alias: :m was not mentioned before. Pass the alias first: e.g. new() |> match() |> node(:n) |> with(:n, :Node) |> |> return(:n) ..."
+  ```
+  """
   @spec with_property(t(), atom(), String.t(), atom() | nil) :: t()
   def with_property(context, alias, property, as \\ nil) do
     with_function_and_property(context, nil, alias, property, as)
   end
 
+  @doc """
+  Add `WITH` clause into the context and receive the updated context.
+  Provide the `context`, name of the `function` which should be called,
+  `alias` (as atom) of the entity you want to return and and atom
+  `as` that would hold the new name of the result.
+
+  ## Example
+  ```
+  alias RedisGraph.{Query}
+
+  {:ok, query} = Query.new() |> Query.match() |> Query.node(:n) |> Query.with_function("labels", :n, :Labels) |> Query.return(:Labels) |> Query.build_query()
+  # query will hold
+  # "MATCH (n) WITH labels(n) AS Labels RETURN Labels"
+
+  ```
+  If the client uses the function incorrectly, the error will be persisted and
+  returned when the client will try to build the query.
+
+  ## Example
+  ```
+  {:error, query} = Query.new() |> Query.match() |> Query.node(:n) |> Query.with_function("labels", :m, :Labels) |> Query.return(:Labels) |> Query.build_query()
+  # error will hold
+  # "Provided alias: :m was not mentioned before. Pass the alias first: e.g. new() |> match() |> node(:n) |> with(:n, :Node) |> |> return(:n) ..."
+  ```
+  """
   @spec with_function(t(), String.t(), atom(), atom() | nil) :: t()
   def with_function(context, function, alias, as \\ nil) do
     with_function_and_property(context, function, alias, nil, as)
   end
 
+  @doc """
+  Add `WITH` clause into the context and receive the updated context.
+  Provide the `context`, name of the `function` which should be called,
+  `alias` (as atom) of the entity, name of the `property` you want to return
+  and and atom `as` that would hold the new name of the result.
+
+  Instead of entity alias, :* atom can be provided.
+  ## Example
+  ```
+  alias RedisGraph.{Query}
+
+  {:ok, query} = Query.new() |> Query.match() |> Query.node(:n) |> Query.with_function_and_property("toUpper", :n, "Name", :Name) |> Query.return(:Name) |> Query.build_query()
+  # query will hold
+  # "MATCH (n) WITH toUpper(n.Name) AS Name RETURN Name"
+
+  {:ok, query} = Query.new() |> Query.match() |> Query.node(:n) |> Query.with(:*) |> Query.return(:n) |> Query.build_query()
+  # query will hold
+  # "MATCH (n) WITH * RETURN n"
+  ```
+  If the client uses the function incorrectly, the error will be persisted and
+  returned when the client will try to build the query.
+
+  ## Example
+  ```
+  {:error, query} = Query.new() |> Query.match() |> Query.node(:n) |> Query.with_function_and_property("toUpper", :m, "Name", :Name) |> Query.return(:Name) |> Query.build_query()
+  # error will hold
+  # "Provided alias: :m was not mentioned before. Pass the alias first: e.g. new() |> match() |> node(:n) |> with(:n, :Node) |> |> return(:n) ..."
+  ```
+  """
   @spec with_function_and_property(
           t(),
           String.t() | nil,
@@ -1015,6 +1834,45 @@ defmodule RedisGraph.Query do
     context
   end
 
+@doc """
+  Add `SET` clause into the context and receive the updated context.
+  Provide the `context`, `alias` (as atom) of the entity, new `value`
+  you want to set and `operator`.
+
+  `value` arbument can be of the following type:
+  - String
+  - number
+  - boolean
+  - nil
+  - list
+  - map
+
+  `operator` can be:
+  - "=" (default) -- for assignment
+  - "+=" -- for update
+
+  ## Example
+  ```
+  alias RedisGraph.{Query}
+
+  {:ok, query} = Query.new() |> Query.match() |> Query.node(:n, %{age: 5, name: "John"}) |> Query.set(:n, %{}) |> Query.return(:n) |> Query.build_query()
+  # query will hold
+  # "MATCH (n {age: 5, name: 'John'}) SET n = {} RETURN n"
+
+  {:ok, query} = Query.new() |> Query.match() |> Query.node(:n, %{age: 5, name: "John"}) |> Query.set(:n, %{works: false}, "+=") |> Query.return(:n) |> Query.build_query()
+  # query will hold
+  # "MATCH (n {age: 5, name: 'John'}) SET n += {works: false} RETURN n"
+  ```
+  If the client uses the function incorrectly, the error will be persisted and
+  returned when the client will try to build the query.
+
+  ## Example
+  ```
+  {:error, query} = uery.new() |> Query.match() |> Query.node(:n, %{age: 5, name: "John"}) |> Query.set(:m, %{}) |> Query.return(:n) |> Query.build_query()
+  # error will hold
+  # "Provided alias: :m was not mentioned before. Pass the alias first: e.g. new() |> match() |> node(:n) |> order_by_property(:n, \"age\") |> ..."
+  ```
+  """
   @spec set(t(), atom(), accepted_value(), String.t()) :: t()
   def set(context, alias, value, operator \\ "=")
 
@@ -1022,6 +1880,42 @@ defmodule RedisGraph.Query do
     set_property_on(context, alias, nil, value, operator, :none)
   end
 
+  @doc """
+  Add `SET` clause into the context and receive the updated context.
+  Provide the `context`, `alias` (as atom) of the entity, name of the
+  `property`, new `value` you want to set and `operator`.
+
+  `value` arbument can be of the following type:
+  - String
+  - number
+  - boolean
+  - nil
+  - list
+  - map
+
+  `operator` can be:
+  - "=" (default) -- for assignment
+  - "+=" -- for update
+
+  ## Example
+  ```
+  alias RedisGraph.{Query}
+
+  {:ok, query} = Query.new() |> Query.match() |> Query.node(:n, %{age: 5, name: "John"}) |> Query.set_property(:n, "age", 25) |> Query.return(:n) |> Query.build_query()
+  # query will hold
+  # "MATCH (n {age: 5, name: 'John'}) SET n.age = 25 RETURN n"
+
+  ```
+  If the client uses the function incorrectly, the error will be persisted and
+  returned when the client will try to build the query.
+
+  ## Example
+  ```
+  {:error, query} = uery.new() |> Query.match() |> Query.node(:n, %{age: 5, name: "John"}) |> Query.set_property(:m, "age", 25) |> Query.return(:n) |> Query.build_query()
+  # error will hold
+  # "Provided alias: :m was not mentioned before. Pass the alias first: e.g. new() |> match() |> node(:n) |> order_by_property(:n, \"age\") |> ..."
+  ```
+  """
   @spec set_property(t(), atom(), String.t(), accepted_value(), String.t()) :: t()
   def set_property(context, alias, property, value, operator \\ "=")
 
@@ -1029,6 +1923,44 @@ defmodule RedisGraph.Query do
     set_property_on(context, alias, property, value, operator, :none)
   end
 
+  @doc """
+  Add `ON MATCH SET` clause into the context and receive the updated context.
+  Provide the `context`, `alias` (as atom) of the entity, new `value`
+  you want to set and `operator`.
+
+  Should only be used when `MERGE` clause is provided first.
+
+  `value` arbument can be of the following type:
+  - String
+  - number
+  - boolean
+  - nil
+  - list
+  - map
+
+  `operator` can be:
+  - "=" (default) -- for assignment
+  - "+=" -- for update
+
+  ## Example
+  ```
+  alias RedisGraph.{Query}
+
+  {:ok, query} = Query.new() |> Query.merge() |> Query.node(:n, ["Person"], %{age: 5}) |> Query.on_match_set(:n, %{name: "Michael"}, "+=") |> Query.return(:n) |> Query.build_query()
+  # query will hold
+  # "MERGE (n:Person {age: 5}) ON MATCH SET n += {name: 'Michael'} RETURN n"
+
+  ```
+  If the client uses the function incorrectly, the error will be persisted and
+  returned when the client will try to build the query.
+
+  ## Example
+  ```
+  {:error, query} = uery.new() |> Query.match() |> Query.node(:n, %{age: 5, name: "John"}) |> Query.on_match_set(:m, %{}) |> Query.return(:n) |> Query.build_query()
+  # error will hold
+  # "MERGE clause has to be provided first before using ON MATCH SET. E.g. new() |> merge() |> node(:n) |> node(:m) |> on_create_set(:n, \"m\") |> return(:n) |> ..."
+  ```
+  """
   @spec on_match_set(t(), atom(), accepted_value(), String.t()) :: t()
   def on_match_set(context, alias, value, operator \\ "=")
 
@@ -1036,6 +1968,44 @@ defmodule RedisGraph.Query do
     set_property_on(context, alias, nil, value, operator, :match)
   end
 
+  @doc """
+  Add `ON MATCH SET` clause into the context and receive the updated context.
+  Provide the `context`, `alias` (as atom) of the entity, name of the
+  `property`, new `value` you want to set and `operator`.
+
+  Should only be used when `MERGE` clause is provided first.
+
+  `value` arbument can be of the following type:
+  - String
+  - number
+  - boolean
+  - nil
+  - list
+  - map
+
+  `operator` can be:
+  - "=" (default) -- for assignment
+  - "+=" -- for update
+
+  ## Example
+  ```
+  alias RedisGraph.{Query}
+
+  {:ok, query} = Query.new() |> Query.merge() |> Query.node(:n, ["Person"], %{age: 5}) |> Query.on_match_set_property(:n, "age", 50) |> Query.return(:n) |> Query.build_query()
+  # query will hold
+  # "MERGE (n:Person {age: 5}) ON MATCH SET n.age = 50 RETURN n"
+
+  ```
+  If the client uses the function incorrectly, the error will be persisted and
+  returned when the client will try to build the query.
+
+  ## Example
+  ```
+  {:error, query} = Query.new() |> Query.match() |> Query.node(:n, ["Person"], %{age: 5}) |> Query.on_match_set_property(:n, "age", 50) |> Query.return(:n) |> Query.build_query()
+  # error will hold
+  # "MERGE clause has to be provided first before using ON MATCH SET. E.g. new() |> merge() |> node(:n) |> node(:m) |> on_create_set(:n, \"m\") |> return(:n) |> ..."
+  ```
+  """
   @spec on_match_set_property(t(), atom(), String.t(), accepted_value(), String.t()) :: t()
   def on_match_set_property(context, alias, property, value, operator \\ "=")
 
@@ -1043,6 +2013,44 @@ defmodule RedisGraph.Query do
     set_property_on(context, alias, property, value, operator, :match)
   end
 
+  @doc """
+  Add `ON CREATE SET` clause into the context and receive the updated context.
+  Provide the `context`, `alias` (as atom) of the entity, new `value`
+  you want to set and `operator`.
+
+  Should only be used when `MERGE` clause is provided first.
+
+  `value` arbument can be of the following type:
+  - String
+  - number
+  - boolean
+  - nil
+  - list
+  - map
+
+  `operator` can be:
+  - "=" (default) -- for assignment
+  - "+=" -- for update
+
+  ## Example
+  ```
+  alias RedisGraph.{Query}
+
+  {:ok, query} = Query.new() |> Query.merge() |> Query.node(:n, ["Person"], %{age: 5}) |> Query.on_create_set(:n, %{name: "Michael"}, "+=") |> Query.return(:n) |> Query.build_query()
+  # query will hold
+  # "MERGE (n:Person {age: 5}) ON CREATE SET n += {name: 'Michael'} RETURN n"
+
+  ```
+  If the client uses the function incorrectly, the error will be persisted and
+  returned when the client will try to build the query.
+
+  ## Example
+  ```
+  {:error, query} = uery.new() |> Query.match() |> Query.node(:n, %{age: 5, name: "John"}) |> Query.on_create_set(:m, %{}) |> Query.return(:n) |> Query.build_query()
+  # error will hold
+  # "MERGE clause has to be provided first before using ON CREATE SET. E.g. new() |> merge() |> node(:n) |> node(:m) |> on_create_set(:n, \"m\") |> return(:n) |> ..."
+  ```
+  """
   @spec on_create_set(t(), atom(), accepted_value(), String.t()) :: t()
   def on_create_set(context, alias, value, operator \\ "=")
 
@@ -1050,6 +2058,44 @@ defmodule RedisGraph.Query do
     set_property_on(context, alias, nil, value, operator, :create)
   end
 
+    @doc """
+  Add `ON CREATE SET` clause into the context and receive the updated context.
+  Provide the `context`, `alias` (as atom) of the entity, name of the
+  `property`, new `value` you want to set and `operator`.
+
+  Should only be used when `MERGE` clause is provided first.
+
+  `value` arbument can be of the following type:
+  - String
+  - number
+  - boolean
+  - nil
+  - list
+  - map
+
+  `operator` can be:
+  - "=" (default) -- for assignment
+  - "+=" -- for update
+
+  ## Example
+  ```
+  alias RedisGraph.{Query}
+
+  {:ok, query} = Query.new() |> Query.merge() |> Query.node(:n, ["Person"], %{age: 5}) |> Query.on_create_set_property(:n, "age", 50) |> Query.return(:n) |> Query.build_query()
+  # query will hold
+  # "MERGE (n:Person {age: 5}) ON CREATE SET n.age = 50 RETURN n"
+
+  ```
+  If the client uses the function incorrectly, the error will be persisted and
+  returned when the client will try to build the query.
+
+  ## Example
+  ```
+  {:error, query} = Query.new() |> Query.match() |> Query.node(:n, ["Person"], %{age: 5}) |> Query.on_create_set_property(:n, "age", 50) |> Query.return(:n) |> Query.build_query()
+  # error will hold
+  # "MERGE clause has to be provided first before using ON CREATE SET. E.g. new() |> merge() |> node(:n) |> node(:m) |> on_create_set(:n, \"m\") |> return(:n) |> ..."
+  ```
+  """
   @spec on_create_set_property(t(), atom(), String.t(), accepted_value(), String.t()) :: t()
   def on_create_set_property(context, alias, property, value, operator \\ "=")
 
@@ -1137,6 +2183,28 @@ defmodule RedisGraph.Query do
     context
   end
 
+  @doc """
+  Function used to build the query string from the Redisgraph.Query context.
+  Function receives the `context` as argument and returns either `{:ok, query_string}`
+  or `{:error, error_message}`
+
+  ## Example
+  ```
+  alias RedisGraph.{Query}
+
+  {:ok, query} = Query.new() |> Query.match() |> Query.node(:n, ["Person"], %{age: 5}) |> Query.return(:n) |> Query.build_query()
+  # query will hold
+  # "MATCH (n:Person {age: 5}) RETURN n"
+  ```
+  If the client uses the function incorrectly, the error will be returned.
+
+  ## Example
+  ```
+  {:error, query} = Query.match(%{}) |> Query.node(:n, ["Person"], %{age: 5}) |> Query.return(:n) |> Query.build_query()
+  # error will hold
+  # "Please instantiate the query first with new(). Istead have e.g. new() |> match |> node(:n) |> return(:n) |> build_query()"
+  ```
+  """
   @spec build_query(t()) :: {:ok, String.t()} | {:error, String.t()}
   def build_query(context) do
     context = check_if_match_ends_with_relationship(context)
