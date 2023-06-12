@@ -79,11 +79,3 @@ jobs:
         restore-keys: ${{ runner.os }}-mix-
     - name: Run tests
       run: mix coveralls
-
-    - name: Code Coverage Summary Report
-      uses: irongut/CodeCoverageSummary@v1.3.0
-      with:
-        filename: cover/cobertura.xml
-        badge: true
-        format: 'markdown'
-        output: 'both'
