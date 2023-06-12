@@ -64,9 +64,6 @@ jobs:
         image: redis/redis-stack-server
         ports:
           - 6379:6379
-    env:
-      MIX_ENV: test
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
     - uses: actions/checkout@v3
     - name: Elixir Setup
@@ -81,4 +78,4 @@ jobs:
         key: ${{ runner.os }}-mix-${{ hashFiles('**/mix.lock') }}
         restore-keys: ${{ runner.os }}-mix-
     - name: Run tests
-      run: mix coveralls.github
+      run: mix coveralls.cobertura
