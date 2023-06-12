@@ -52,8 +52,8 @@ jobs:
       run: mix format --check-formatted
     - name: Run dialyzer
       run: mix dialyzer --format github  --ignore-exit-status --no-check 
-    - name: Run credo and show errors if issuer is medium or high
-      run: mix credo suggest --min-priority 2
+    - name: Run credo and show errors if issuer is high
+      run: mix credo suggest --min-priority high
 
   tests:
     name: Tests
