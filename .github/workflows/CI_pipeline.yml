@@ -1,33 +1,29 @@
-# This workflow uses actions that are not certified by GitHub.
-# They are provided by a third-party and are governed by
-# separate terms of service, privacy policy, and support
-# documentation.
-
-name: Elixir CI
+name: CI Pipeline
 
 on:
   push:
     branches: [ "master" ]
   pull_request:
-    branches: [ "master" ]
+    branches: [ "master", "CI_pipeline" ]
 
 permissions:
   contents: read
 
+env:
+  MIX_ENV: test
+
 jobs:
-  build:
-
-    name: Build and test
+  deps:
+    name: Dependencies
     runs-on: ubuntu-20.04
-
     steps:
     - uses: actions/checkout@v3
-    - name: Set up Elixir
-      uses: erlef/setup-beam@988e02bfe678367a02564f65ca2e37726dc0268f
+    - name: Elixir Setup
+      uses: actions/setup-elixir@v1
       with:
-        elixir-version: '1.14.1' # Define the elixir version [required]
-        otp-version: '25.1' # Define the OTP version [required]
-    - name: Restore dependencies cache
+        otp-version: '25.1'
+        elixir-version: '1.14.1'
+    - name: Restore cached dependencies
       uses: actions/cache@v3
       with:
         path: deps
@@ -35,11 +31,52 @@ jobs:
         restore-keys: ${{ runner.os }}-mix-
     - name: Install dependencies
       run: mix deps.get
+
+  static_code_analysis:
+    name: Static Code Analysis
+    runs-on: ubuntu-20.04
+    needs: deps
+    steps:
+    - uses: actions/checkout@v3
+    - name: Elixir Setup
+      uses: actions/setup-elixir@v1
+      with:
+        otp-version: '25.1'
+        elixir-version: '1.14.1'
+    - name: Restore cached dependencies
+      uses: actions/cache@v3
+      with:
+        path: deps
+        key: ${{ runner.os }}-mix-${{ hashFiles('**/mix.lock') }}
+        restore-keys: ${{ runner.os }}-mix-
     - name: Check format
       run: mix format --check-formatted
     - name: Run dialyzer
-      run: mix dialyzer
+      run: mix dialyzer --format github  
     - name: Run credo
       run: mix credo
+
+  tests:
+    name: Tests
+    runs-on: ubuntu-20.04
+    needs: deps
+    services:
+      redisgraph:
+        image: redis/redis-stack-server
+        ports:
+          - 6379:6379
+    steps:
+    - uses: actions/checkout@v3
+    - name: Elixir Setup
+      uses: actions/setup-elixir@v1
+      with:
+        otp-version: '25.1'
+        elixir-version: '1.14.1'
+    - name: Restore cached dependencies
+      uses: actions/cache@v3
+      with:
+        path: deps
+        key: ${{ runner.os }}-mix-${{ hashFiles('**/mix.lock') }}
+        restore-keys: ${{ runner.os }}-mix-
     - name: Run tests
       run: mix test --cover
