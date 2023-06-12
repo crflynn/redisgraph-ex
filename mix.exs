@@ -11,7 +11,7 @@ defmodule RedisGraph.MixProject do
       version: @version,
       elixir: "~> 1.14",
       start_permanent: Mix.env() == :prod,
-      # test_coverage: [tool: CoverModule],
+      test_coverage: [tool: ExCoveralls],
       aliases: aliases(),
       deps: deps(),
       # hex
