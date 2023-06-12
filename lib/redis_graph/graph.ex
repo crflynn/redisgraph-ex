@@ -1,6 +1,7 @@
 defmodule RedisGraph.Graph do
   @moduledoc """
-  A Graph that represents a RedisGraph database and consists of the name property.
+  A Graph that represents a RedisGraph database
+  and consists of the `name` property.
 
   A name is required for each graph.
   """
