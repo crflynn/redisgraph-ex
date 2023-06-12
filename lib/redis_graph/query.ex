@@ -2337,7 +2337,7 @@ defmodule RedisGraph.Query do
     {:error, error}
   end
 
-  @spec build_query_for_general_clause(Query.t(), atom(), list(map())) :: String.t()
+  @spec build_query_for_general_clause(t(), atom(), list(map())) :: String.t()
   defp build_query_for_general_clause(context, clause, elements) do
     {_last_element, query} =
       Enum.reduce(elements, {nil, ""}, fn element_alias, acc ->
@@ -2395,7 +2395,7 @@ defmodule RedisGraph.Query do
     "#{clause_to_string} #{query}"
   end
 
-  @spec build_query_for_where_clause(Query.t(), list(map())) :: String.t()
+  @spec build_query_for_where_clause(t(), list(map())) :: String.t()
   defp build_query_for_where_clause(_context, elements) do
     query_list =
       Stream.map(elements, fn element ->
@@ -2424,7 +2424,7 @@ defmodule RedisGraph.Query do
     "WHERE #{query_list_joined}"
   end
 
-  @spec build_query_for_return_or_with_clause(Query.t(), atom(), list(map())) :: String.t()
+  @spec build_query_for_return_or_with_clause(t(), atom(), list(map())) :: String.t()
   defp build_query_for_return_or_with_clause(_context, clause, elements) do
     clause_to_string = Atom.to_string(clause) |> String.replace("_", " ") |> String.upcase()
     query_list =
@@ -2465,7 +2465,7 @@ defmodule RedisGraph.Query do
     "#{clause_to_string} #{query_list_joined}"
   end
 
-  @spec build_query_for_order_by_clause(Query.t(), list(map())) :: String.t()
+  @spec build_query_for_order_by_clause(t(), list(map())) :: String.t()
   defp build_query_for_order_by_clause(_context, elements) do
     query_list =
       Stream.map(elements, fn element ->
@@ -2477,7 +2477,7 @@ defmodule RedisGraph.Query do
     "ORDER BY #{query_list_joined}"
   end
 
-  @spec build_query_for_set_clause(Query.t(), atom(), list(map())) :: String.t()
+  @spec build_query_for_set_clause(t(), atom(), list(map())) :: String.t()
   defp build_query_for_set_clause(_context, clause, elements) do
     clause_to_string =
       if(clause == :set,
@@ -2503,13 +2503,13 @@ defmodule RedisGraph.Query do
     "#{clause_to_string} #{query_list_joined}"
   end
 
-  @spec build_query_for_delete_clause(Query.t(), list(map())) :: String.t()
+  @spec build_query_for_delete_clause(t(), list(map())) :: String.t()
   defp build_query_for_delete_clause(_context, elements) do
     query_list = Enum.join(elements, ", ")
     "DELETE #{query_list}"
   end
 
-  @spec build_query_for_limit_or_skip_clause(Query.t(), atom(), list(map())) :: String.t()
+  @spec build_query_for_limit_or_skip_clause(t(), atom(), list(map())) :: String.t()
   defp build_query_for_limit_or_skip_clause(_context, clause, elements) do
     clause_to_string = Atom.to_string(clause) |> String.upcase()
     query_list = Enum.map(elements, fn element -> "#{clause_to_string} #{element}" end)
