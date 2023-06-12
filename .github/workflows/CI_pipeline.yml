@@ -78,4 +78,4 @@ jobs:
         key: ${{ runner.os }}-mix-${{ hashFiles('**/mix.lock') }}
         restore-keys: ${{ runner.os }}-mix-
     - name: Run tests
-      run: mix test test/redis_graph/node_test.exs --cover
+      run: mix coveralls
