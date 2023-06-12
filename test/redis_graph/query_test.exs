@@ -1071,7 +1071,7 @@ defmodule RedisGraph.QueryTest do
         |> Query.order_by(:n, 5)
         |> Query.build_query()
 
-      assert query == "Provide property name as string. E.g. new() |> match() |> node(:n) |> order_by(:n, \"age\") |> return(:n) |> ..."
+      assert query == "Wrong parameters provided. E.g. new() |> match() |> node(:n) |> order_by(:n, \"age\") |> return(:n) |> ..."
     end
 
     test "build query that would give error because node property is empty string." do
@@ -1084,6 +1084,15 @@ defmodule RedisGraph.QueryTest do
         |> Query.build_query()
 
       assert query == "Provide property name. E.g. new() |> match() |> node(:n) |> order_by(:n, \"age\") |> return(:n) |> ..."
+    end
+
+    test "build query that would give error because new() is not called." do
+      {:error, query} =
+        %{}
+        |> Query.order_by(:n, "")
+        |> Query.build_query()
+
+      assert query == "Please instantiate the query first with new(). Istead have e.g. new() |> match |> node(:n) |> return(:n) |> build_query()"
     end
   end
 
@@ -1942,10 +1951,5 @@ defmodule RedisGraph.QueryTest do
       assert query == "In case you provide MATCH, OPTIONAL MATCH - then RETURN, RETURN DISCTINCT or DELETE also has to be provided. E.g. new() |> match |> node(:n) |> return(:n)"
     end
 
-    test "build query that would give error because query wasn't initalized first before building it." do
-      {:error, query} = Query.build_query("error")
-
-      assert query == "Please instantiate the query first with new(). Istead have e.g. new() |> match |> node(:n) |> return(:n) |> build_query()"
-    end
   end
 end
