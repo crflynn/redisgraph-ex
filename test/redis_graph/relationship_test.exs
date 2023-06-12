@@ -4,7 +4,6 @@ defmodule RedisGraph.RelationshipTest do
   use ExUnit.Case, async: true
 
   describe "Relationship:" do
-
     test "create a new Relationship" do
       src_node = Node.new(%{labels: ["person"], properties: %{name: "John Doe"}})
       dest_node = Node.new(%{labels: ["place"], properties: %{name: "Japan"}})
@@ -50,16 +49,22 @@ defmodule RedisGraph.RelationshipTest do
           properties: %{purpose: "pleasure"}
         })
 
-        orig_alias = Map.get(myrelationship, :alias)
-        %{alias: new_alias} = Relationship.set_alias_if_nil(myrelationship)
-        assert orig_alias == new_alias
+      orig_alias = Map.get(myrelationship, :alias)
+      %{alias: new_alias} = Relationship.set_alias_if_nil(myrelationship)
+      assert orig_alias == new_alias
     end
 
     test "fail to create relationship because type is not provided" do
       src_node = Node.new(%{labels: ["person"], properties: %{name: "John Doe"}})
       dest_node = Node.new(%{labels: ["place"], properties: %{name: "Japan"}})
 
-      assert_raise(FunctionClauseError, fn -> Relationship.new(%{src_node: src_node, dest_node: dest_node, properties: %{purpose: "pleasure"}})end)
+      assert_raise(FunctionClauseError, fn ->
+        Relationship.new(%{
+          src_node: src_node,
+          dest_node: dest_node,
+          properties: %{purpose: "pleasure"}
+        })
+      end)
     end
 
     test "compares two relationships correctly" do

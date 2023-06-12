@@ -72,7 +72,7 @@ defmodule RedisGraph.Node do
   @spec set_alias_if_nil(t()) :: t()
   def set_alias_if_nil(node) do
     if is_nil(node.alias) do
-      alias =  Util.random_string() |> String.to_atom()
+      alias = Util.random_string() |> String.to_atom()
       %{node | alias: alias}
     else
       node

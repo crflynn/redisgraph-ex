@@ -144,7 +144,7 @@ defmodule RedisGraph.QueryResult do
   @doc "Return a boolean indicating emptiness of a QueryResult."
   @spec is_empty(t()) :: boolean()
   def is_empty(query_result) do
-    if is_nil(query_result.result_set) or length(query_result.result_set) == 0 do
+    if is_nil(query_result.result_set) or Enum.empty?(query_result.result_set) do
       true
     else
       false
@@ -164,7 +164,7 @@ defmodule RedisGraph.QueryResult do
       @relationships_deleted,
       @indices_created,
       @indices_deleted,
-      @query_internal_execution_time,
+      @query_internal_execution_time
     ]
 
     stats
@@ -204,7 +204,7 @@ defmodule RedisGraph.QueryResult do
 
   @spec parse_header(t()) :: list(atom())
   defp parse_header(%{raw_result_set: [header | _tail]} = _query_result) do
-    header |> Enum.map(fn h -> Enum.at(h, 1) |> String.to_atom end)
+    header |> Enum.map(fn h -> Enum.at(h, 1) |> String.to_atom() end)
   end
 
   @spec fetch_metadata(t()) :: t()
@@ -284,7 +284,8 @@ defmodule RedisGraph.QueryResult do
     # IO.inspect(properties)
     # IO.puts("parse_row > end")
 
-    Enum.with_index(row) |> Enum.map(fn {cell, index} ->
+    Enum.with_index(row)
+    |> Enum.map(fn {cell, index} ->
       [column_type, alias] = header |> Enum.at(index)
       # IO.puts("column_type")
       # IO.inspect(column_type)
@@ -292,7 +293,8 @@ defmodule RedisGraph.QueryResult do
       # IO.inspect(column_type)
       parse_cell(query_result, cell, column_type, String.to_atom(alias))
     end)
-    #cells = Enum.map(row, fn cell -> parse_cell(query_result, cell) end)
+
+    # cells = Enum.map(row, fn cell -> parse_cell(query_result, cell) end)
     # IO.puts("parse_row > cells")
     # IO.inspect(cells)
   end
@@ -338,13 +340,12 @@ defmodule RedisGraph.QueryResult do
     # IO.inspect(res)
   end
 
-
   # Unused, retained for client compatibility.
   defp parse_cell(query_result, cell, 2, alias) do
     parse_node(query_result, cell, alias)
   end
 
-   # Unused, retained for client compatibility.
+  # Unused, retained for client compatibility.
   defp parse_cell(query_result, cell, 3, alias) do
     parse_relationship(query_result, cell, alias)
   end

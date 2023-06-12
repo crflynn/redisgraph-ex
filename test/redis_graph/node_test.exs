@@ -38,7 +38,9 @@ defmodule RedisGraph.NodeTest do
       assert not Node.compare(mynode, othernode)
 
       # different labels sizes
-      mynode = Node.new(%{alias: :n, labels: ["person", "student"], properties: %{name: "John Doe"}})
+      mynode =
+        Node.new(%{alias: :n, labels: ["person", "student"], properties: %{name: "John Doe"}})
+
       othernode = Node.new(%{alias: :n, labels: ["person"], properties: %{name: "John Doe"}})
 
       assert not Node.compare(mynode, othernode)
@@ -51,7 +53,9 @@ defmodule RedisGraph.NodeTest do
 
       # different properties sizes
       mynode = Node.new(%{alias: :n, labels: ["person"], properties: %{name: "John Doe"}})
-      othernode = Node.new(%{alias: :n, labels: ["person"], properties: %{name: "John Doe", age: 25}})
+
+      othernode =
+        Node.new(%{alias: :n, labels: ["person"], properties: %{name: "John Doe", age: 25}})
 
       assert not Node.compare(mynode, othernode)
 

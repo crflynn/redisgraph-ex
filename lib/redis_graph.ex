@@ -178,10 +178,7 @@ defmodule RedisGraph do
   @spec call_procedure(connection(), String.t(), String.t(), list(), map()) ::
           {:ok, list()} | {:error, any()}
   def call_procedure(conn, name, procedure, args \\ [], kwargs \\ %{}) do
-    args =
-      args
-      |> Enum.map(&Util.value_to_string/1)
-      |> Enum.join(",")
+    args = Enum.map_join(args, ",", &Util.value_to_string/1)
 
     yields = Map.get(kwargs, "y", [])
 

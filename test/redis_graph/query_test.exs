@@ -4,7 +4,6 @@ defmodule RedisGraph.QueryTest do
 
   # :create! | :match! | :optional_match! | :merge! | :delete! | :set! | :on_match_set! | :on_create_set! | :with! | :where! | :order_by! | :limit! | :skip! | :return! | :return_distinct!
 
-
   describe "MATCH clause:" do
     test "build query that would match on a node (with alias n) and return it through the alias." do
       {:ok, query} =
@@ -280,7 +279,8 @@ defmodule RedisGraph.QueryTest do
         |> Query.return(:n)
         |> Query.build_query()
 
-      assert query == "Provided alias is not an atom, only atoms are accepted. E.g. new() |> match() |> node(:n) |> relationship_from_to(:r) |> node(:m) |> ..."
+      assert query ==
+               "Provided alias is not an atom, only atoms are accepted. E.g. new() |> match() |> node(:n) |> relationship_from_to(:r) |> node(:m) |> ..."
     end
 
     test "build query that would give error since node labels is provided not as list." do
@@ -325,7 +325,8 @@ defmodule RedisGraph.QueryTest do
         |> Query.return(:n)
         |> Query.build_query()
 
-      assert query == "Provided alias is not an atom, only atoms are accepted. E.g. new() |> match() |> node(:n) |> relationship_from_to(:r) |> node(:m) |> ..."
+      assert query ==
+               "Provided alias is not an atom, only atoms are accepted. E.g. new() |> match() |> node(:n) |> relationship_from_to(:r) |> node(:m) |> ..."
     end
 
     test "build query that would give error since relationship type is not string." do
@@ -360,7 +361,8 @@ defmodule RedisGraph.QueryTest do
         |> Query.node(:m)
         |> Query.build_query()
 
-      assert query == "Relationship has to originate from a Node. Add a Node first with node() function"
+      assert query ==
+               "Relationship has to originate from a Node. Add a Node first with node() function"
     end
 
     test "build query that would give error since relationship doesn't point to a node." do
@@ -371,7 +373,8 @@ defmodule RedisGraph.QueryTest do
         |> Query.relationship_from_to(:r)
         |> Query.build_query()
 
-      assert query == "MATCH clause cannot end with a Relationship, add a Node at the end. E.g. new() |> match() |> node(:n) |> relationship_from_to(:r) |> node(:m) |> ..."
+      assert query ==
+               "MATCH clause cannot end with a Relationship, add a Node at the end. E.g. new() |> match() |> node(:n) |> relationship_from_to(:r) |> node(:m) |> ..."
     end
 
     test "build query that would give error since there are 2 relationships in a row." do
@@ -384,7 +387,8 @@ defmodule RedisGraph.QueryTest do
         |> Query.node(:m)
         |> Query.build_query()
 
-      assert query == "You cannot have multiple Relationships in a row. Add a Node between them with node() function"
+      assert query ==
+               "You cannot have multiple Relationships in a row. Add a Node between them with node() function"
     end
 
     test "build query that would give error since reverse relationship alias is not atom." do
@@ -396,7 +400,8 @@ defmodule RedisGraph.QueryTest do
         |> Query.node(:m)
         |> Query.build_query()
 
-      assert query == "Provided alias is not an atom, only atoms are accepted. E.g. new() |> match() |> node(:n) |> relationship_from_to(:r) |> node(:m) |> ..."
+      assert query ==
+               "Provided alias is not an atom, only atoms are accepted. E.g. new() |> match() |> node(:n) |> relationship_from_to(:r) |> node(:m) |> ..."
     end
 
     test "build query that would give error since reverse relationship type is not string." do
@@ -423,7 +428,7 @@ defmodule RedisGraph.QueryTest do
       assert query == "Wrong parameters provided to relationship_to_from(:r)"
     end
 
-     test "build query that would give error since reverse relationship doesn't start from a node." do
+    test "build query that would give error since reverse relationship doesn't start from a node." do
       {:error, query} =
         Query.new()
         |> Query.match()
@@ -442,7 +447,8 @@ defmodule RedisGraph.QueryTest do
         |> Query.relationship_to_from(:r)
         |> Query.build_query()
 
-      assert query == "MATCH clause cannot end with a Relationship, add a Node at the end. E.g. new() |> match() |> node(:n) |> relationship_from_to(:r) |> node(:m) |> ..."
+      assert query ==
+               "MATCH clause cannot end with a Relationship, add a Node at the end. E.g. new() |> match() |> node(:n) |> relationship_from_to(:r) |> node(:m) |> ..."
     end
 
     test "build query that would give error since there are 2 reverse relationships in a row." do
@@ -455,7 +461,8 @@ defmodule RedisGraph.QueryTest do
         |> Query.node(:m)
         |> Query.build_query()
 
-      assert query == "You cannot have multiple Relationships in a row. Add a Node between them with node() function"
+      assert query ==
+               "You cannot have multiple Relationships in a row. Add a Node between them with node() function"
     end
 
     test "build query that would give error since context is wrong." do
@@ -464,7 +471,8 @@ defmodule RedisGraph.QueryTest do
         |> Query.node(:n, ["Person", 2, nil])
         |> Query.build_query()
 
-      assert query == "Please instantiate the query first with new(). Istead have e.g. new() |> match |> node(:n) |> return(:n) |> build_query()"
+      assert query ==
+               "Please instantiate the query first with new(). Istead have e.g. new() |> match |> node(:n) |> return(:n) |> build_query()"
     end
 
     # test "build query that would give error since same alias is provided for two different nodes." do
@@ -569,7 +577,8 @@ defmodule RedisGraph.QueryTest do
         |> Query.return(:b)
         |> Query.build_query()
 
-      assert query == "OPTIONAL MATCH (n:Person) MATCH (m {age: 2, name: 'Mike'}),(b) RETURN n, m, b"
+      assert query ==
+               "OPTIONAL MATCH (n:Person) MATCH (m {age: 2, name: 'Mike'}),(b) RETURN n, m, b"
     end
 
     test "build query that would optional match on a node with alias n, relationship with alias r coming from the first one and going to second node with alias m and return them through the aliases." do
@@ -603,9 +612,9 @@ defmodule RedisGraph.QueryTest do
         |> Query.build_query()
 
       assert query == "MATCH (n)-[r:Friend]->(m) OPTIONAL MATCH (b:Person) RETURN n, r, m, b"
-      end
+    end
 
-       test "build query that would give error since node alias is provided as string instead of atom on ." do
+    test "build query that would give error since node alias is provided as string instead of atom on ." do
       {:error, query} =
         Query.new()
         |> Query.optional_match()
@@ -613,7 +622,8 @@ defmodule RedisGraph.QueryTest do
         |> Query.return(:n)
         |> Query.build_query()
 
-      assert query == "Provided alias is not an atom, only atoms are accepted. E.g. new() |> match() |> node(:n) |> relationship_from_to(:r) |> node(:m) |> ..."
+      assert query ==
+               "Provided alias is not an atom, only atoms are accepted. E.g. new() |> match() |> node(:n) |> relationship_from_to(:r) |> node(:m) |> ..."
     end
 
     test "build query that would give error since node labels is provided not as list and node parameters not as map." do
@@ -626,7 +636,7 @@ defmodule RedisGraph.QueryTest do
       assert query == "Wrong parameters provided to node(:n)"
     end
 
-     test "build query that would give error since reverse relationship type is not string and property is not map." do
+    test "build query that would give error since reverse relationship type is not string and property is not map." do
       {:error, query} =
         Query.new()
         |> Query.optional_match()
@@ -660,7 +670,8 @@ defmodule RedisGraph.QueryTest do
         |> Query.return(:m)
         |> Query.build_query()
 
-      assert query == "CREATE (n:Person {age: 5, name: 'Mike', works: false}),(m:Person:Student) RETURN n, m"
+      assert query ==
+               "CREATE (n:Person {age: 5, name: 'Mike', works: false}),(m:Person:Student) RETURN n, m"
     end
 
     test "create node n with label Person and properties {age: 5, name: 'Mike', works: false} and relationship r of type KNOWS and node m with label Person, Student, and return them all by aliases" do
@@ -675,7 +686,8 @@ defmodule RedisGraph.QueryTest do
         |> Query.return(:m)
         |> Query.build_query()
 
-      assert query == "CREATE (n:Person {age: 5, name: 'Mike', works: false})-[r:KNOWS]->(m:Person:Student) RETURN n, r, m"
+      assert query ==
+               "CREATE (n:Person {age: 5, name: 'Mike', works: false})-[r:KNOWS]->(m:Person:Student) RETURN n, r, m"
     end
 
     test "build query that would match on node, create the same node and return it." do
@@ -683,7 +695,7 @@ defmodule RedisGraph.QueryTest do
         Query.new()
         |> Query.match()
         |> Query.node(:n, ["Person"])
-        |> Query.create
+        |> Query.create()
         |> Query.node(:n)
         |> Query.return(:n)
         |> Query.build_query()
@@ -698,7 +710,7 @@ defmodule RedisGraph.QueryTest do
         |> Query.node(:n, ["Person"])
         |> Query.relationship_from_to(:r, "KNOWS")
         |> Query.node(:m, ["Person"])
-        |> Query.create
+        |> Query.create()
         |> Query.node(:n)
         |> Query.return(:n)
         |> Query.build_query()
@@ -742,7 +754,8 @@ defmodule RedisGraph.QueryTest do
         |> Query.node(:n)
         |> Query.build_query()
 
-      assert query == "Please instantiate the query first with new(). Istead have e.g. new() |> match |> node(:n) |> return(:n) |> build_query()"
+      assert query ==
+               "Please instantiate the query first with new(). Istead have e.g. new() |> match |> node(:n) |> return(:n) |> build_query()"
     end
 
     test "build query that would give error since reverse relationship type is not string and property is not map." do
@@ -769,7 +782,8 @@ defmodule RedisGraph.QueryTest do
         |> Query.return(:m)
         |> Query.build_query()
 
-      assert query == "When you create a relationship, the type has to be provided. E.g. new() |> match() |> node(:n) |> relationship_from_to(:r, \"WORKS\") |> ..."
+      assert query ==
+               "When you create a relationship, the type has to be provided. E.g. new() |> match() |> node(:n) |> relationship_from_to(:r, \"WORKS\") |> ..."
     end
 
     test "build query that would give error since reverse relationship's type is not provided on its creation." do
@@ -784,7 +798,8 @@ defmodule RedisGraph.QueryTest do
         |> Query.return(:m)
         |> Query.build_query()
 
-      assert query == "When you create a relationship, the type has to be provided. E.g. new() |> match() |> node(:n) |> relationship_from_to(:r, \"WORKS\") |> ..."
+      assert query ==
+               "When you create a relationship, the type has to be provided. E.g. new() |> match() |> node(:n) |> relationship_from_to(:r, \"WORKS\") |> ..."
     end
   end
 
@@ -799,7 +814,8 @@ defmodule RedisGraph.QueryTest do
         |> Query.return(:m)
         |> Query.build_query()
 
-      assert query == "MERGE (n:Person {age: 5, name: 'Mike', works: false}),(m:Person:Student) RETURN n, m"
+      assert query ==
+               "MERGE (n:Person {age: 5, name: 'Mike', works: false}),(m:Person:Student) RETURN n, m"
     end
 
     test "merge node n with label Person and properties {age: 5, name: 'Mike', works: false} and relationship r of type KNOWS and node m with label Person, Student, and return them all by aliases" do
@@ -814,7 +830,8 @@ defmodule RedisGraph.QueryTest do
         |> Query.return(:m)
         |> Query.build_query()
 
-      assert query == "MERGE (n:Person {age: 5, name: 'Mike', works: false})-[r:KNOWS]->(m:Person:Student) RETURN n, r, m"
+      assert query ==
+               "MERGE (n:Person {age: 5, name: 'Mike', works: false})-[r:KNOWS]->(m:Person:Student) RETURN n, r, m"
     end
 
     test "build query that would give error since node labels is provided not as list and node parameters not as map." do
@@ -845,7 +862,8 @@ defmodule RedisGraph.QueryTest do
         |> Query.node(:n)
         |> Query.build_query()
 
-      assert query == "Please instantiate the query first with new(). Istead have e.g. new() |> match |> node(:n) |> return(:n) |> build_query()"
+      assert query ==
+               "Please instantiate the query first with new(). Istead have e.g. new() |> match |> node(:n) |> return(:n) |> build_query()"
     end
 
     # test "build query that would match on node with relationship and node then create the same node and return it." do
@@ -863,7 +881,6 @@ defmodule RedisGraph.QueryTest do
 
     #   assert query == "Provided alias: :n was alreay mentioned before. Pass the another alias: e.g. new() |> match() |> node(:n) |> node(:m) |> order_by_property(:n, \"age\") |> ..."
     # end
-
   end
 
   describe "WHERE clause:" do
@@ -932,7 +949,8 @@ defmodule RedisGraph.QueryTest do
         |> Query.return(:m)
         |> Query.build_query()
 
-      assert query == "MATCH (n),(m) WHERE n.age > 5 OR NOT m.balance IS null AND m.balance IS NOT null RETURN n, m"
+      assert query ==
+               "MATCH (n),(m) WHERE n.age > 5 OR NOT m.balance IS null AND m.balance IS NOT null RETURN n, m"
     end
 
     test "build query that would giver error because order of logical operators in where clause is wrong." do
@@ -945,8 +963,9 @@ defmodule RedisGraph.QueryTest do
         |> Query.return(:n)
         |> Query.build_query()
 
-      assert query == "Provided order of WHERE clauses is wrong. You first call either where() or where_not() and then any number of the following or_where()/and_where()/or_not_where() etc. " <>
-      "E.g. new() |> match() |> node(:n) |> where(:n, \"age\", :bigger, 20) |> and_where(:n, \"name\", :contains, \"A\") |> return(:n) |> ..."
+      assert query ==
+               "Provided order of WHERE clauses is wrong. You first call either where() or where_not() and then any number of the following or_where()/and_where()/or_not_where() etc. " <>
+                 "E.g. new() |> match() |> node(:n) |> where(:n, \"age\", :bigger, 20) |> and_where(:n, \"name\", :contains, \"A\") |> return(:n) |> ..."
     end
 
     test "build query that would giver error because order of logical operators in where clause is wrong again." do
@@ -959,8 +978,9 @@ defmodule RedisGraph.QueryTest do
         |> Query.return(:n)
         |> Query.build_query()
 
-      assert query == "Provided order of WHERE clauses is wrong. You first call either where() or where_not() and then any number of the following or_where()/and_where()/or_not_where() etc. " <>
-      "E.g. new() |> match() |> node(:n) |> where(:n, \"age\", :bigger, 20) |> and_where(:n, \"name\", :contains, \"A\") |> return(:n) |> ..."
+      assert query ==
+               "Provided order of WHERE clauses is wrong. You first call either where() or where_not() and then any number of the following or_where()/and_where()/or_not_where() etc. " <>
+                 "E.g. new() |> match() |> node(:n) |> where(:n, \"age\", :bigger, 20) |> and_where(:n, \"name\", :contains, \"A\") |> return(:n) |> ..."
     end
 
     test "build query that would giver error because node alias wasn't provided before." do
@@ -972,7 +992,8 @@ defmodule RedisGraph.QueryTest do
         |> Query.return(:n)
         |> Query.build_query()
 
-      assert query == "Provided alias: :m was not mentioned before. Pass the alias first: e.g. new() |> match() |> node(:n) |> order_by_property(:n, \"age\") |> ..."
+      assert query ==
+               "Provided alias: :m was not mentioned before. Pass the alias first: e.g. new() |> match() |> node(:n) |> order_by_property(:n, \"age\") |> ..."
     end
 
     test "build query that would giver error because property name wasn't provided." do
@@ -984,7 +1005,8 @@ defmodule RedisGraph.QueryTest do
         |> Query.return(:n)
         |> Query.build_query()
 
-      assert query == "Provide property name. E.g. new() |> match() |> node(:n) |> where(:n, \"age\", :bigger, 20}) |> return(:n) |> ..."
+      assert query ==
+               "Provide property name. E.g. new() |> match() |> node(:n) |> where(:n, \"age\", :bigger, 20}) |> return(:n) |> ..."
     end
 
     test "build query that would giver error because unsupported operator was provided." do
@@ -996,7 +1018,8 @@ defmodule RedisGraph.QueryTest do
         |> Query.return(:n)
         |> Query.build_query()
 
-      assert query == "Provided value: 5 or/and operator: :test in the WHERE clause is not supported."
+      assert query ==
+               "Provided value: 5 or/and operator: :test in the WHERE clause is not supported."
     end
 
     test "build query that would giver error because wrong operator was for the given value provided." do
@@ -1008,7 +1031,8 @@ defmodule RedisGraph.QueryTest do
         |> Query.return(:n)
         |> Query.build_query()
 
-      assert query == "Provided value: 5 or/and operator: :in in the WHERE clause is not supported."
+      assert query ==
+               "Provided value: 5 or/and operator: :in in the WHERE clause is not supported."
     end
 
     test "build query that would giver error because wrong value is empty string." do
@@ -1020,7 +1044,8 @@ defmodule RedisGraph.QueryTest do
         |> Query.return(:n)
         |> Query.build_query()
 
-      assert query == "Value can't be of empty string. E.g. new() |> match() |> node(:n) |> where({:n, \"age\", :contains, \"A\") |> return(:n) |> ..."
+      assert query ==
+               "Value can't be of empty string. E.g. new() |> match() |> node(:n) |> where({:n, \"age\", :contains, \"A\") |> return(:n) |> ..."
     end
   end
 
@@ -1059,7 +1084,8 @@ defmodule RedisGraph.QueryTest do
         |> Query.order_by(:m, "age")
         |> Query.build_query()
 
-      assert query == "Provided alias: :m was not mentioned before. Pass the alias first: e.g. new() |> match() |> node(:n) |> order_by_property(:n, \"age\") |> ..."
+      assert query ==
+               "Provided alias: :m was not mentioned before. Pass the alias first: e.g. new() |> match() |> node(:n) |> order_by_property(:n, \"age\") |> ..."
     end
 
     test "build query that would give error because node property is of incorrect type." do
@@ -1071,7 +1097,8 @@ defmodule RedisGraph.QueryTest do
         |> Query.order_by(:n, 5)
         |> Query.build_query()
 
-      assert query == "Wrong parameters provided. E.g. new() |> match() |> node(:n) |> order_by(:n, \"age\") |> return(:n) |> ..."
+      assert query ==
+               "Wrong parameters provided. E.g. new() |> match() |> node(:n) |> order_by(:n, \"age\") |> return(:n) |> ..."
     end
 
     test "build query that would give error because node property is empty string." do
@@ -1083,7 +1110,8 @@ defmodule RedisGraph.QueryTest do
         |> Query.order_by(:n, "")
         |> Query.build_query()
 
-      assert query == "Provide property name. E.g. new() |> match() |> node(:n) |> order_by(:n, \"age\") |> return(:n) |> ..."
+      assert query ==
+               "Provide property name. E.g. new() |> match() |> node(:n) |> order_by(:n, \"age\") |> return(:n) |> ..."
     end
 
     test "build query that would give error because new() is not called." do
@@ -1092,7 +1120,8 @@ defmodule RedisGraph.QueryTest do
         |> Query.order_by(:n, "")
         |> Query.build_query()
 
-      assert query == "Please instantiate the query first with new(). Istead have e.g. new() |> match |> node(:n) |> return(:n) |> build_query()"
+      assert query ==
+               "Please instantiate the query first with new(). Istead have e.g. new() |> match |> node(:n) |> return(:n) |> build_query()"
     end
   end
 
@@ -1115,7 +1144,8 @@ defmodule RedisGraph.QueryTest do
         |> Query.limit(10)
         |> Query.build_query()
 
-      assert query == "MATCH or OPTIONAL MATCH or CREATE or MERGE clause has to be provided first before using LIMIT. E.g. new() |> match() |> node(:n) |> ..."
+      assert query ==
+               "MATCH or OPTIONAL MATCH or CREATE or MERGE clause has to be provided first before using LIMIT. E.g. new() |> match() |> node(:n) |> ..."
     end
 
     test "build query that would give error because incorrect value is provided." do
@@ -1127,7 +1157,8 @@ defmodule RedisGraph.QueryTest do
         |> Query.limit("test")
         |> Query.build_query()
 
-      assert query == "Wrong number parameter was probided, only non negatibe integers supported. E.g. new() |> match() |> node(:n) |> return(:n) |> limit(10)|> build_query()"
+      assert query ==
+               "Wrong number parameter was probided, only non negatibe integers supported. E.g. new() |> match() |> node(:n) |> return(:n) |> limit(10)|> build_query()"
     end
   end
 
@@ -1150,7 +1181,8 @@ defmodule RedisGraph.QueryTest do
         |> Query.skip(10)
         |> Query.build_query()
 
-      assert query == "MATCH or OPTIONAL MATCH or CREATE or MERGE clause has to be provided first before using SKIP. E.g. new() |> match() |> node(:n) |> ..."
+      assert query ==
+               "MATCH or OPTIONAL MATCH or CREATE or MERGE clause has to be provided first before using SKIP. E.g. new() |> match() |> node(:n) |> ..."
     end
 
     test "build query that would give error because incorrect value is provided." do
@@ -1162,7 +1194,8 @@ defmodule RedisGraph.QueryTest do
         |> Query.skip("test")
         |> Query.build_query()
 
-      assert query == "Wrong number parameter was probided, only non negatibe integers supported. E.g. new() |> match() |> node(:n) |> return(:n) |> skip(10)|> build_query()"
+      assert query ==
+               "Wrong number parameter was probided, only non negatibe integers supported. E.g. new() |> match() |> node(:n) |> return(:n) |> skip(10)|> build_query()"
     end
   end
 
@@ -1251,7 +1284,8 @@ defmodule RedisGraph.QueryTest do
         |> Query.return(:Labels)
         |> Query.build_query()
 
-      assert query == "Provide function name. E.g. new() |> match() |> node(:n) |> with_function_and_property(\"toUpper\", :n, \"name\", :Name) |> return(:Name) |>..."
+      assert query ==
+               "Provide function name. E.g. new() |> match() |> node(:n) |> with_function_and_property(\"toUpper\", :n, \"name\", :Name) |> return(:Name) |>..."
     end
 
     test "build query that would give error because specified property is empty string." do
@@ -1263,10 +1297,11 @@ defmodule RedisGraph.QueryTest do
         |> Query.return(:n)
         |> Query.build_query()
 
-      assert query == "Provide property name. E.g. new() |> match() |> node(:n) |> with_function_and_property(\"toUpper\", :n, \"name\", :Name) |> return(:Name) |> ..."
+      assert query ==
+               "Provide property name. E.g. new() |> match() |> node(:n) |> with_function_and_property(\"toUpper\", :n, \"name\", :Name) |> return(:Name) |> ..."
     end
 
-     test "build query that would give error because specified alias is not present." do
+    test "build query that would give error because specified alias is not present." do
       {:error, query} =
         Query.new()
         |> Query.match()
@@ -1275,7 +1310,8 @@ defmodule RedisGraph.QueryTest do
         |> Query.return(:Labels)
         |> Query.build_query()
 
-      assert query == "Provided alias: :n was not mentioned before. Pass the alias first: e.g. new() |> match() |> node(:n) |> with(:n, :Node) |> |> return(:n) ..."
+      assert query ==
+               "Provided alias: :n was not mentioned before. Pass the alias first: e.g. new() |> match() |> node(:n) |> with(:n, :Node) |> |> return(:n) ..."
     end
 
     test "build query that would give error because specified alias in return is not present." do
@@ -1287,7 +1323,8 @@ defmodule RedisGraph.QueryTest do
         |> Query.return(:LABELS)
         |> Query.build_query()
 
-      assert query == "Provided alias: :LABELS was not mentioned before. Pass the alias first: e.g. new() |> match() |> node(:n) |> order_by_property(:n, \"age\") |> ..."
+      assert query ==
+               "Provided alias: :LABELS was not mentioned before. Pass the alias first: e.g. new() |> match() |> node(:n) |> order_by_property(:n, \"age\") |> ..."
     end
 
     test "build query that would give error because as variable is not an atom." do
@@ -1299,9 +1336,9 @@ defmodule RedisGraph.QueryTest do
         |> Query.return(:Labels)
         |> Query.build_query()
 
-      assert query == "Provided as attribute: Labels needs to be an atom. E.g. new() |> match() |> node(:n) |> with(:n, :Node) |> |> return(:n) ..."
+      assert query ==
+               "Provided as attribute: Labels needs to be an atom. E.g. new() |> match() |> node(:n) |> with(:n, :Node) |> |> return(:n) ..."
     end
-
   end
 
   describe "SET clause:" do
@@ -1402,7 +1439,8 @@ defmodule RedisGraph.QueryTest do
         |> Query.return(:n)
         |> Query.build_query()
 
-      assert query == "Provided alias: :m was not mentioned before. Pass the alias first: e.g. new() |> match() |> node(:n) |> order_by_property(:n, \"age\") |> ..."
+      assert query ==
+               "Provided alias: :m was not mentioned before. Pass the alias first: e.g. new() |> match() |> node(:n) |> order_by_property(:n, \"age\") |> ..."
     end
 
     test "build query that would give error because property name is not provided." do
@@ -1414,7 +1452,8 @@ defmodule RedisGraph.QueryTest do
         |> Query.return(:n)
         |> Query.build_query()
 
-      assert query == "Provide property name. E.g. new() |> match() |> node(:n) |> set_property(:n, \"name\", :Name) |> return(:n) |> ..."
+      assert query ==
+               "Provide property name. E.g. new() |> match() |> node(:n) |> set_property(:n, \"name\", :Name) |> return(:n) |> ..."
     end
 
     test "build query that would give error node n is set to node m which is not provided before." do
@@ -1426,7 +1465,8 @@ defmodule RedisGraph.QueryTest do
         |> Query.return(:n)
         |> Query.build_query()
 
-      assert query == "Provided alias: :m was not mentioned before. Pass the alias first: e.g. new() |> match() |> node(:n) |> order_by_property(:n, \"age\") |> ..."
+      assert query ==
+               "Provided alias: :m was not mentioned before. Pass the alias first: e.g. new() |> match() |> node(:n) |> order_by_property(:n, \"age\") |> ..."
     end
 
     test "build query that would give error as node n is set based on merge instead of match." do
@@ -1438,7 +1478,8 @@ defmodule RedisGraph.QueryTest do
         |> Query.return(:n)
         |> Query.build_query()
 
-      assert query == "MATCH or OPTIONAL MATCH or CREATE clause has to be provided first before using SET. E.g. new() |> match() |> node(:n) |> ..."
+      assert query ==
+               "MATCH or OPTIONAL MATCH or CREATE clause has to be provided first before using SET. E.g. new() |> match() |> node(:n) |> ..."
     end
 
     test "build query that would give error as node n is set with wrong operator." do
@@ -1450,16 +1491,27 @@ defmodule RedisGraph.QueryTest do
         |> Query.return(:n)
         |> Query.build_query()
 
-      assert query == "Provided operator \"==\" is not supported. Only := (default) or :+= is supported. E.g. new() |> match() |> node(:n) |> node(:n) |> set_property(:n, \"age\", 100, :+=) |> ..."
+      assert query ==
+               "Provided operator \"==\" is not supported. Only := (default) or :+= is supported. E.g. new() |> match() |> node(:n) |> node(:n) |> set_property(:n, \"age\", 100, :+=) |> ..."
     end
   end
 
   describe "ON MATCH SET clause:" do
     test "merge node n with label Person and properties {age: 5, name: 'Mike', works: false} and on match set update properties and return the node by alias" do
       {:ok, query} =
-        Query.new() |> Query.merge() |> Query.node(:n, ["Person"], %{age: 5, name: "Mike", works: false}) |> Query.on_match_set(:n, %{age: 50, name: "Michael", works: true, hobbies: ["sports", "cooking", "reading"]}, "+=") |> Query.return(:n) |> Query.build_query()
+        Query.new()
+        |> Query.merge()
+        |> Query.node(:n, ["Person"], %{age: 5, name: "Mike", works: false})
+        |> Query.on_match_set(
+          :n,
+          %{age: 50, name: "Michael", works: true, hobbies: ["sports", "cooking", "reading"]},
+          "+="
+        )
+        |> Query.return(:n)
+        |> Query.build_query()
 
-      assert query == "MERGE (n:Person {age: 5, name: 'Mike', works: false}) ON MATCH SET n += {age: 50, hobbies: ['sports', 'cooking', 'reading'], name: 'Michael', works: true} RETURN n"
+      assert query ==
+               "MERGE (n:Person {age: 5, name: 'Mike', works: false}) ON MATCH SET n += {age: 50, hobbies: ['sports', 'cooking', 'reading'], name: 'Michael', works: true} RETURN n"
     end
 
     test "merge node n with label Person and properties {age: 5, name: 'Mike', works: false} and on match set age to 50 and return the node by alias" do
@@ -1471,7 +1523,8 @@ defmodule RedisGraph.QueryTest do
         |> Query.return(:n)
         |> Query.build_query()
 
-      assert query == "MERGE (n:Person {age: 5, name: 'Mike', works: false}) ON MATCH SET n.age = 50 RETURN n"
+      assert query ==
+               "MERGE (n:Person {age: 5, name: 'Mike', works: false}) ON MATCH SET n.age = 50 RETURN n"
     end
 
     test "merge node n with label Person and properties {age: 5, name: 'Mike', works: false} and relationship r of type KNOWS and node m with label Person, Student, on match set node n and relationship r and return them all by aliases" do
@@ -1481,14 +1534,19 @@ defmodule RedisGraph.QueryTest do
         |> Query.node(:n, ["Person"], %{age: 5, name: "Mike", works: false})
         |> Query.relationship_from_to(:r, "KNOWS")
         |> Query.node(:m, ["Person", "Student"])
-        |> Query.on_match_set(:n, %{age: 50, name: "Michael", works: true, hobbies: ["sports", "cooking", "reading"]}, "+=")
+        |> Query.on_match_set(
+          :n,
+          %{age: 50, name: "Michael", works: true, hobbies: ["sports", "cooking", "reading"]},
+          "+="
+        )
         |> Query.on_match_set(:r, %{duration: 5})
         |> Query.return(:n)
         |> Query.return(:r)
         |> Query.return(:m)
         |> Query.build_query()
 
-      assert query == "MERGE (n:Person {age: 5, name: 'Mike', works: false})-[r:KNOWS]->(m:Person:Student) ON MATCH SET n += {age: 50, hobbies: ['sports', 'cooking', 'reading'], name: 'Michael', works: true}, r = {duration: 5} RETURN n, r, m"
+      assert query ==
+               "MERGE (n:Person {age: 5, name: 'Mike', works: false})-[r:KNOWS]->(m:Person:Student) ON MATCH SET n += {age: 50, hobbies: ['sports', 'cooking', 'reading'], name: 'Michael', works: true}, r = {duration: 5} RETURN n, r, m"
     end
 
     test "build query that would give error because node m was not provided before." do
@@ -1500,7 +1558,8 @@ defmodule RedisGraph.QueryTest do
         |> Query.return(:n)
         |> Query.build_query()
 
-      assert query == "Provided alias: :m was not mentioned before. Pass the alias first: e.g. new() |> match() |> node(:n) |> order_by_property(:n, \"age\") |> ..."
+      assert query ==
+               "Provided alias: :m was not mentioned before. Pass the alias first: e.g. new() |> match() |> node(:n) |> order_by_property(:n, \"age\") |> ..."
     end
 
     test "build query that would give error because property name is not provided." do
@@ -1512,7 +1571,8 @@ defmodule RedisGraph.QueryTest do
         |> Query.return(:n)
         |> Query.build_query()
 
-      assert query == "Provide property name. E.g. new() |> match() |> node(:n) |> set_property(:n, \"name\", :Name) |> return(:n) |> ..."
+      assert query ==
+               "Provide property name. E.g. new() |> match() |> node(:n) |> set_property(:n, \"name\", :Name) |> return(:n) |> ..."
     end
 
     test "build query that would give error node n is set to node m which is not provided before." do
@@ -1524,7 +1584,8 @@ defmodule RedisGraph.QueryTest do
         |> Query.return(:n)
         |> Query.build_query()
 
-      assert query == "Provided alias: :m was not mentioned before. Pass the alias first: e.g. new() |> match() |> node(:n) |> order_by_property(:n, \"age\") |> ..."
+      assert query ==
+               "Provided alias: :m was not mentioned before. Pass the alias first: e.g. new() |> match() |> node(:n) |> order_by_property(:n, \"age\") |> ..."
     end
 
     test "build query that would give error as node n is set with match instead of merge." do
@@ -1536,7 +1597,8 @@ defmodule RedisGraph.QueryTest do
         |> Query.return(:n)
         |> Query.build_query()
 
-      assert query == "MERGE clause has to be provided first before using ON MATCH SET. E.g. new() |> merge() |> node(:n) |> node(:m) |> on_create_set(:n, \"m\") |> return(:n) |> ..."
+      assert query ==
+               "MERGE clause has to be provided first before using ON MATCH SET. E.g. new() |> merge() |> node(:n) |> node(:m) |> on_create_set(:n, \"m\") |> return(:n) |> ..."
     end
 
     test "build query that would give error as node n is set with wrong operator." do
@@ -1548,7 +1610,8 @@ defmodule RedisGraph.QueryTest do
         |> Query.return(:n)
         |> Query.build_query()
 
-      assert query == "Provided operator \"==\" is not supported. Only := (default) or :+= is supported. E.g. new() |> match() |> node(:n) |> node(:n) |> set_property(:n, \"age\", 100, :+=) |> ..."
+      assert query ==
+               "Provided operator \"==\" is not supported. Only := (default) or :+= is supported. E.g. new() |> match() |> node(:n) |> node(:n) |> set_property(:n, \"age\", 100, :+=) |> ..."
     end
   end
 
@@ -1562,7 +1625,8 @@ defmodule RedisGraph.QueryTest do
         |> Query.return(:n)
         |> Query.build_query()
 
-      assert query == "MERGE (n:Person {age: 25, name: 'Mike', works: true}) ON CREATE SET n += {hobbies: ['sports', 'cooking', 'reading'], stuff: null} RETURN n"
+      assert query ==
+               "MERGE (n:Person {age: 25, name: 'Mike', works: true}) ON CREATE SET n += {hobbies: ['sports', 'cooking', 'reading'], stuff: null} RETURN n"
     end
 
     test "merge node n with label Person and properties {age: 5, name: 'Mike', works: false} and on create set hobbies property to a list of hobbies and return the node by alias" do
@@ -1574,7 +1638,8 @@ defmodule RedisGraph.QueryTest do
         |> Query.return(:n)
         |> Query.build_query()
 
-      assert query == "MERGE (n:Person {age: 5, name: 'Mike', works: false}) ON CREATE SET n.hobbies = ['sports', 'cooking', 'reading'] RETURN n"
+      assert query ==
+               "MERGE (n:Person {age: 5, name: 'Mike', works: false}) ON CREATE SET n.hobbies = ['sports', 'cooking', 'reading'] RETURN n"
     end
 
     test "merge node n with label Person and properties {age: 5, name: 'Mike', works: false} and relationship r of type KNOWS and node m with label Person, Student, set on create node n and relationship r and return them all by aliases" do
@@ -1584,14 +1649,19 @@ defmodule RedisGraph.QueryTest do
         |> Query.node(:n, ["Person"], %{age: 5, name: "Mike", works: false})
         |> Query.relationship_from_to(:r, "KNOWS")
         |> Query.node(:m, ["Person", "Student"])
-        |> Query.on_create_set(:n, %{age: 50, name: "Michael", works: true, hobbies: ["sports", "cooking", "reading"]}, "+=")
+        |> Query.on_create_set(
+          :n,
+          %{age: 50, name: "Michael", works: true, hobbies: ["sports", "cooking", "reading"]},
+          "+="
+        )
         |> Query.on_create_set_property(:r, "duration", 5)
         |> Query.return(:n)
         |> Query.return(:r)
         |> Query.return(:m)
         |> Query.build_query()
 
-      assert query == "MERGE (n:Person {age: 5, name: 'Mike', works: false})-[r:KNOWS]->(m:Person:Student) ON CREATE SET n += {age: 50, hobbies: ['sports', 'cooking', 'reading'], name: 'Michael', works: true}, r.duration = 5 RETURN n, r, m"
+      assert query ==
+               "MERGE (n:Person {age: 5, name: 'Mike', works: false})-[r:KNOWS]->(m:Person:Student) ON CREATE SET n += {age: 50, hobbies: ['sports', 'cooking', 'reading'], name: 'Michael', works: true}, r.duration = 5 RETURN n, r, m"
     end
 
     test "merge node n with label Person and some properties and relationship r of type KNOWS and node m with label Person, Student, on create set node n and relationship r and on match set node m, and return them all by aliases" do
@@ -1601,7 +1671,11 @@ defmodule RedisGraph.QueryTest do
         |> Query.node(:n, ["Person"], %{age: 5, name: "Mike", works: false})
         |> Query.relationship_from_to(:r, "KNOWS")
         |> Query.node(:m, ["Person", "Student"], %{name: "Bob"})
-        |> Query.on_create_set(:n, %{age: 50, name: "Michael", works: true, hobbies: ["sports", "cooking", "reading"]}, "+=")
+        |> Query.on_create_set(
+          :n,
+          %{age: 50, name: "Michael", works: true, hobbies: ["sports", "cooking", "reading"]},
+          "+="
+        )
         |> Query.on_create_set_property(:r, "duration", 5)
         |> Query.on_match_set_property(:m, "age", 25)
         |> Query.return(:n)
@@ -1609,7 +1683,8 @@ defmodule RedisGraph.QueryTest do
         |> Query.return(:m)
         |> Query.build_query()
 
-      assert query == "MERGE (n:Person {age: 5, name: 'Mike', works: false})-[r:KNOWS]->(m:Person:Student {name: 'Bob'}) ON CREATE SET n += {age: 50, hobbies: ['sports', 'cooking', 'reading'], name: 'Michael', works: true}, r.duration = 5 ON MATCH SET m.age = 25 RETURN n, r, m"
+      assert query ==
+               "MERGE (n:Person {age: 5, name: 'Mike', works: false})-[r:KNOWS]->(m:Person:Student {name: 'Bob'}) ON CREATE SET n += {age: 50, hobbies: ['sports', 'cooking', 'reading'], name: 'Michael', works: true}, r.duration = 5 ON MATCH SET m.age = 25 RETURN n, r, m"
     end
 
     test "build query that would give error because node m was not provided before." do
@@ -1621,7 +1696,8 @@ defmodule RedisGraph.QueryTest do
         |> Query.return(:n)
         |> Query.build_query()
 
-      assert query == "Provided alias: :m was not mentioned before. Pass the alias first: e.g. new() |> match() |> node(:n) |> order_by_property(:n, \"age\") |> ..."
+      assert query ==
+               "Provided alias: :m was not mentioned before. Pass the alias first: e.g. new() |> match() |> node(:n) |> order_by_property(:n, \"age\") |> ..."
     end
 
     test "build query that would give error because property name is not provided." do
@@ -1633,7 +1709,8 @@ defmodule RedisGraph.QueryTest do
         |> Query.return(:n)
         |> Query.build_query()
 
-      assert query == "Provide property name. E.g. new() |> match() |> node(:n) |> set_property(:n, \"name\", :Name) |> return(:n) |> ..."
+      assert query ==
+               "Provide property name. E.g. new() |> match() |> node(:n) |> set_property(:n, \"name\", :Name) |> return(:n) |> ..."
     end
 
     test "build query that would give error node n is set to node m which is not provided before." do
@@ -1645,7 +1722,8 @@ defmodule RedisGraph.QueryTest do
         |> Query.return(:n)
         |> Query.build_query()
 
-      assert query == "Provided alias: :m was not mentioned before. Pass the alias first: e.g. new() |> match() |> node(:n) |> order_by_property(:n, \"age\") |> ..."
+      assert query ==
+               "Provided alias: :m was not mentioned before. Pass the alias first: e.g. new() |> match() |> node(:n) |> order_by_property(:n, \"age\") |> ..."
     end
 
     test "build query that would give error as node n is set with match instead of merge." do
@@ -1657,7 +1735,8 @@ defmodule RedisGraph.QueryTest do
         |> Query.return(:n)
         |> Query.build_query()
 
-      assert query == "MERGE clause has to be provided first before using ON CREATE SET. E.g. new() |> merge() |> node(:n) |> node(:m) |> on_create_set(:n, \"m\") |> return(:n) |> ..."
+      assert query ==
+               "MERGE clause has to be provided first before using ON CREATE SET. E.g. new() |> merge() |> node(:n) |> node(:m) |> on_create_set(:n, \"m\") |> return(:n) |> ..."
     end
 
     test "build query that would give error as node n is set with wrong operator." do
@@ -1669,7 +1748,8 @@ defmodule RedisGraph.QueryTest do
         |> Query.return(:n)
         |> Query.build_query()
 
-      assert query == "Provided operator \"==\" is not supported. Only := (default) or :+= is supported. E.g. new() |> match() |> node(:n) |> node(:n) |> set_property(:n, \"age\", 100, :+=) |> ..."
+      assert query ==
+               "Provided operator \"==\" is not supported. Only := (default) or :+= is supported. E.g. new() |> match() |> node(:n) |> node(:n) |> set_property(:n, \"age\", 100, :+=) |> ..."
     end
   end
 
@@ -1721,7 +1801,8 @@ defmodule RedisGraph.QueryTest do
         |> Query.delete(:m)
         |> Query.build_query()
 
-      assert query == "Provided alias: :m was not mentioned before. Pass the alias first: e.g. new() |> match() |> node(:n) |> order_by_property(:n, \"age\") |> ..."
+      assert query ==
+               "Provided alias: :m was not mentioned before. Pass the alias first: e.g. new() |> match() |> node(:n) |> order_by_property(:n, \"age\") |> ..."
     end
 
     test "build query that would give error because context was not provided with new()" do
@@ -1729,7 +1810,8 @@ defmodule RedisGraph.QueryTest do
         Query.delete(%{error: nil}, :m)
         |> Query.build_query()
 
-      assert query == "Please instantiate the query first with new(). Istead have e.g. new() |> match |> node(:n) |> return(:n) |> build_query()"
+      assert query ==
+               "Please instantiate the query first with new(). Istead have e.g. new() |> match |> node(:n) |> return(:n) |> build_query()"
     end
 
     test "build query that would give error because delete() is not called." do
@@ -1739,7 +1821,8 @@ defmodule RedisGraph.QueryTest do
         |> Query.node(:n)
         |> Query.build_query()
 
-      assert query == "In case you provide MATCH, OPTIONAL MATCH - then RETURN, RETURN DISCTINCT or DELETE also has to be provided. E.g. new() |> match |> node(:n) |> return(:n)"
+      assert query ==
+               "In case you provide MATCH, OPTIONAL MATCH - then RETURN, RETURN DISCTINCT or DELETE also has to be provided. E.g. new() |> match |> node(:n) |> return(:n)"
     end
   end
 
@@ -1793,7 +1876,8 @@ defmodule RedisGraph.QueryTest do
         |> Query.return_function_and_property("toUpper", :m, "name", :Name)
         |> Query.build_query()
 
-      assert query == "MATCH (n)-[r]->(m) RETURN n.age AS Age, type(r) AS Type, toUpper(m.name) AS Name"
+      assert query ==
+               "MATCH (n)-[r]->(m) RETURN n.age AS Age, type(r) AS Type, toUpper(m.name) AS Name"
     end
 
     test "build query that would give error because provided alias is not present." do
@@ -1804,7 +1888,8 @@ defmodule RedisGraph.QueryTest do
         |> Query.return(:m)
         |> Query.build_query()
 
-      assert query == "Provided alias: :m was not mentioned before. Pass the alias first: e.g. new() |> match() |> node(:n) |> order_by_property(:n, \"age\") |> ..."
+      assert query ==
+               "Provided alias: :m was not mentioned before. Pass the alias first: e.g. new() |> match() |> node(:n) |> order_by_property(:n, \"age\") |> ..."
     end
 
     test "build query that would give error because necessary clause for not provided first." do
@@ -1812,7 +1897,8 @@ defmodule RedisGraph.QueryTest do
         Query.return(%{error: nil}, :m)
         |> Query.build_query()
 
-      assert query == "One of these clauses MATCH, CREATE, MERGE etc. has to be provided first before using RETURN. E.g. new() |> match() |> node(:n) |> return(:n)  |> ..."
+      assert query ==
+               "One of these clauses MATCH, CREATE, MERGE etc. has to be provided first before using RETURN. E.g. new() |> match() |> node(:n) |> return(:n)  |> ..."
     end
 
     test "build query that would give error because context is not provided through new() function context was not provided through new() function test." do
@@ -1821,7 +1907,8 @@ defmodule RedisGraph.QueryTest do
         |> Query.return(:m)
         |> Query.build_query()
 
-      assert query == "Please instantiate the query first with new(). Istead have e.g. new() |> match |> node(:n) |> return(:n) |> build_query()"
+      assert query ==
+               "Please instantiate the query first with new(). Istead have e.g. new() |> match |> node(:n) |> return(:n) |> build_query()"
     end
 
     test "build query that would give error because property name is not provided." do
@@ -1832,7 +1919,8 @@ defmodule RedisGraph.QueryTest do
         |> Query.return_property(:n, "")
         |> Query.build_query()
 
-      assert query == "Provide property name. E.g. new() |> match() |> node(:n) |> return_property(:n, \"age\") |> ..."
+      assert query ==
+               "Provide property name. E.g. new() |> match() |> node(:n) |> return_property(:n, \"age\") |> ..."
     end
 
     test "build query that would give error because function name is not provided." do
@@ -1843,7 +1931,8 @@ defmodule RedisGraph.QueryTest do
         |> Query.return_function("", :n, "name")
         |> Query.build_query()
 
-      assert query == "Provide function name. E.g. new() |> match() |> node(:n) |> return_function(\"toUpper\", :n) |> ..."
+      assert query ==
+               "Provide function name. E.g. new() |> match() |> node(:n) |> return_function(\"toUpper\", :n) |> ..."
     end
 
     test "build query that would give error because return is not called." do
@@ -1853,7 +1942,8 @@ defmodule RedisGraph.QueryTest do
         |> Query.node(:n)
         |> Query.build_query()
 
-      assert query == "In case you provide MATCH, OPTIONAL MATCH - then RETURN, RETURN DISCTINCT or DELETE also has to be provided. E.g. new() |> match |> node(:n) |> return(:n)"
+      assert query ==
+               "In case you provide MATCH, OPTIONAL MATCH - then RETURN, RETURN DISCTINCT or DELETE also has to be provided. E.g. new() |> match |> node(:n) |> return(:n)"
     end
 
     test "build query that would give error because as varible is not atom." do
@@ -1864,7 +1954,8 @@ defmodule RedisGraph.QueryTest do
         |> Query.return(:n, "Person")
         |> Query.build_query()
 
-      assert query == "Provided as attribute: Person needs to be an atom. E.g. Query.new() |> Query.match() |> Query.node(:n) |> Query.return(:n, :Node) |> Query.build_query()"
+      assert query ==
+               "Provided as attribute: Person needs to be an atom. E.g. Query.new() |> Query.match() |> Query.node(:n) |> Query.return(:n, :Node) |> Query.build_query()"
     end
   end
 
@@ -1907,7 +1998,8 @@ defmodule RedisGraph.QueryTest do
         |> Query.return_distinct_function_and_property("toUpper", :m, "name", :Name)
         |> Query.build_query()
 
-      assert query == "MATCH (n)-[r]->(m) RETURN DISTINCT n.age AS Age, type(r) AS Type, toUpper(m.name) AS Name"
+      assert query ==
+               "MATCH (n)-[r]->(m) RETURN DISTINCT n.age AS Age, type(r) AS Type, toUpper(m.name) AS Name"
     end
 
     test "build query that would give error because provided alias is not present." do
@@ -1918,7 +2010,8 @@ defmodule RedisGraph.QueryTest do
         |> Query.return_distinct(:m)
         |> Query.build_query()
 
-      assert query == "Provided alias: :m was not mentioned before. Pass the alias first: e.g. new() |> match() |> node(:n) |> order_by_property(:n, \"age\") |> ..."
+      assert query ==
+               "Provided alias: :m was not mentioned before. Pass the alias first: e.g. new() |> match() |> node(:n) |> order_by_property(:n, \"age\") |> ..."
     end
 
     test "build query that would give error context was not provided through new() function." do
@@ -1927,7 +2020,8 @@ defmodule RedisGraph.QueryTest do
         |> Query.return_distinct(:m)
         |> Query.build_query()
 
-      assert query == "Please instantiate the query first with new(). Istead have e.g. new() |> match |> node(:n) |> return(:n) |> build_query()"
+      assert query ==
+               "Please instantiate the query first with new(). Istead have e.g. new() |> match |> node(:n) |> return(:n) |> build_query()"
     end
 
     test "build query that would give error because as varible is not atom." do
@@ -1938,7 +2032,8 @@ defmodule RedisGraph.QueryTest do
         |> Query.return_distinct(:n, "Person")
         |> Query.build_query()
 
-      assert query == "Provided as attribute: Person needs to be an atom. E.g. Query.new() |> Query.match() |> Query.node(:n) |> Query.return(:n, :Node) |> Query.build_query()"
+      assert query ==
+               "Provided as attribute: Person needs to be an atom. E.g. Query.new() |> Query.match() |> Query.node(:n) |> Query.return(:n, :Node) |> Query.build_query()"
     end
 
     test "build query that would give error because return_distinct() is not called." do
@@ -1948,8 +2043,8 @@ defmodule RedisGraph.QueryTest do
         |> Query.node(:n)
         |> Query.build_query()
 
-      assert query == "In case you provide MATCH, OPTIONAL MATCH - then RETURN, RETURN DISCTINCT or DELETE also has to be provided. E.g. new() |> match |> node(:n) |> return(:n)"
+      assert query ==
+               "In case you provide MATCH, OPTIONAL MATCH - then RETURN, RETURN DISCTINCT or DELETE also has to be provided. E.g. new() |> match |> node(:n) |> return(:n)"
     end
-
   end
 end

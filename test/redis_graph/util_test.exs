@@ -4,16 +4,18 @@ defmodule RedisGraph.UtilTest do
   use ExUnit.Case
 
   setup_all do
-  john = Node.new(%{labels: ["Person", "Student"], properties: %{name: "John Doe", age: 22}})
-  japan = Node.new(%{labels: ["Place"], properties: %{name: "Japan",  capital: "Tokyo", island: true}})
+    john = Node.new(%{labels: ["Person", "Student"], properties: %{name: "John Doe", age: 22}})
 
-  relationship =
-    Relationship.new(%{
-      src_node: john,
-      dest_node: japan,
-      type: "TRAVELS_TO",
-      properties: %{purpose: "pleasure", spent: 11.11}
-    })
+    japan =
+      Node.new(%{labels: ["Place"], properties: %{name: "Japan", capital: "Tokyo", island: true}})
+
+    relationship =
+      Relationship.new(%{
+        src_node: john,
+        dest_node: japan,
+        type: "TRAVELS_TO",
+        properties: %{purpose: "pleasure", spent: 11.11}
+      })
 
     %{john: john, japan: japan, relationship: relationship}
   end
@@ -30,7 +32,8 @@ defmodule RedisGraph.UtilTest do
     |> Enum.each(fn char -> assert String.contains?(possible_characters, char) end)
   end
 
-  test "gets the properties to a string", %{john: john, japan: japan, relationship: relationship} = _context do
+  test "gets the properties to a string",
+       %{john: john, japan: japan, relationship: relationship} = _context do
     john_props = Util.properties_to_string(john.properties)
     japan_props = Util.properties_to_string(japan.properties)
     rel_props = Util.properties_to_string(relationship.properties)
@@ -67,11 +70,12 @@ defmodule RedisGraph.UtilTest do
   end
 
   test "gets value to a string", _context do
-    values_to_string = Util.value_to_string(["test", 11, 12.12, false, nil, ["hi", "bye"], %{me: "you"}])
+    values_to_string =
+      Util.value_to_string(["test", 11, 12.12, false, nil, ["hi", "bye"], %{me: "you"}])
+
     empty_value_to_string = ""
 
     assert values_to_string == "['test', 11, 12.12, false, null, ['hi', 'bye'], {me: 'you'}]"
     assert empty_value_to_string == ""
   end
-
 end

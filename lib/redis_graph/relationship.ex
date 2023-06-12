@@ -67,7 +67,7 @@ defmodule RedisGraph.Relationship do
   @spec set_alias_if_nil(t()) :: t()
   def set_alias_if_nil(relationship) do
     if is_nil(relationship.alias) do
-      alias =  Util.random_string() |> String.to_atom()
+      alias = Util.random_string() |> String.to_atom()
       %{relationship | alias: alias}
     else
       relationship
