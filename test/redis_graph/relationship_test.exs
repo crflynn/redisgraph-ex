@@ -1,4 +1,4 @@
-defmodule RedisGraph.EdgeTest do
+defmodule RedisGraph.RelationshipTest do
   alias RedisGraph.{Node, Relationship}
 
   use ExUnit.Case, async: true

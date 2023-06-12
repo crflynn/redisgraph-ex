@@ -20,7 +20,7 @@ defmodule RedisGraph.QueryResultTest do
     :ok
   end
 
-  describe "Hard-coded queries:" do
+  describe "Integration tests with hard-coded queries:" do
     test "test that result if an instance eof the QueryResult struct", %{conn: conn, graph: graph} = _context do
       query = "CREATE (n:Person {age: 10, hobbies: ['sports', 'cooking'], name: 'John'})-[r:HAS]->(m:Dog {age: 2, name: 'Charlie'}) RETURN n, r, m, m.age"
       {:ok, query_result} = RedisGraph.query(conn, graph.name, query)
@@ -28,7 +28,7 @@ defmodule RedisGraph.QueryResultTest do
     end
 
     test "test that graph name returned is same as graph name provided", %{conn: conn, graph: graph} = _context do
-      query = "CREATE (n:Person {age: 10, hobbies: ['sports', 'cooking'], name:   'John'})-[r:HAS]->(m:Dog {age: 2, name: 'Charlie'}) RETURN n, r, m, m.age"
+      query = "CREATE (n:Person {age: 10, hobbies: ['sports', 'cooking'], name: 'John'})-[r:HAS]->(m:Dog {age: 2, name: 'Charlie'}) RETURN n, r, m, m.age"
       {:ok, query_result} = RedisGraph.query(conn, graph.name, query)
       graph_name = Map.get(query_result, :graph_name)
       assert graph_name == graph.name
@@ -132,7 +132,7 @@ defmodule RedisGraph.QueryResultTest do
 
   end
 
-  describe "built queries:" do
+  describe "End-to-end testing using the query builder:" do
     test "create nodes with relatioships and test for multiple things", %{conn: conn, graph: graph} = _context do
       # same as "CREATE (n:Person {age: 10, hobbies: ['sports', 'cooking'], money: 22.2, name: 'John', stuff: null, works: false})-[r:HAS {duration: 1}]->(m:Dog {age: 2, name: 'Charlie'}) RETURN n, r, m, n.age, n.hobbies, n.name, n.stuff, n.money, n.works, r.duration, m.name"
       {:ok, query} = Query.new
@@ -231,100 +231,3 @@ defmodule RedisGraph.QueryResultTest do
     assert not is_nil(QueryResult.query_internal_execution_time(query_result))
   end
 end
-
-  # [
-  #   %RedisGraph.Node{
-  #     id: 0,
-  #     alias: :n,
-  #     labels: ["Person"],
-  #     properties: %{
-  #       age: 10,
-  #       hobbies: ["sports", "cooking"],
-  #       money: 22.2,
-  #       name: "John",
-  #       works: false
-  #     }
-  #   },
-  #   %RedisGraph.Relationship{
-  #     id: 0,
-  #     alias: :r,
-  #     src_node: 0,
-  #     dest_node: 1,
-  #     type: "HAS",
-  #     properties: %{duration: 1}
-  #   },
-  #   %RedisGraph.Node{
-  #     id: 1,
-  #     alias: :m,
-  #     labels: ["Dog"],
-  #     properties: %{age: 2, name: "Charlie"}
-  #   },
-  #   10,
-  #   ["sports", "cooking"],
-  #   "John",
-  #   nil,
-  #   22.2,
-  #   false,
-  #   1,
-  #   "Charlie"
-  # ]
-
-  #   assert is_nil(QueryResult.nodes_created(query_result))
-  #   assert is_nil(QueryResult.nodes_deleted(query_result))
-  #   assert is_nil(QueryResult.properties_set(query_result))
-  #   assert is_nil(QueryResult.relationships_created(query_result))
-  #   assert is_nil(QueryResult.relationships_deleted(query_result))
-  #   assert is_binary(QueryResult.query_internal_execution_time(query_result))
-
-  # :conn,
-  # :graph_name,
-  # :raw_result_set,
-  # :header,
-  # :result_set,
-  # :statistics,
-  # :labels,
-  # :property_keys,
-  # :relationship_types
-
-
-  # test "functionality of query result parsing" do
-  #   {:ok, conn} = Redix.start_link(@redis_address)
-
-  #   sample_graph = RedisGraphTest.build_sample_graph()
-
-  #   {:ok, commit_result} = RedisGraph.commit(conn, sample_graph)
-  #   %QueryResult{} = commit_result
-
-  #   query = "MATCH (p:person)-[v:visited]->(c:country) RETURN c.name, p, v"
-
-  #   # Execute the query
-  #   {:ok, query_result} = RedisGraph.query(conn, sample_graph.name, query)
-
-  #   # Pretty print the results using the Scribe lib
-  #   assert String.contains?(QueryResult.pretty_print(query_result), "c.name")
-
-  #   {:ok, delete_result} = RedisGraph.delete(conn, sample_graph.name)
-  #   assert is_binary(Map.get(delete_result.statistics, "Query internal execution time"))
-  # end
-
-  # test "query result properties" do
-  #   {:ok, conn} = Redix.start_link(@redis_address)
-
-  #   sample_graph = RedisGraphTest.build_sample_graph()
-
-  #   {:ok, commit_result} = RedisGraph.commit(conn, sample_graph)
-  #   %QueryResult{} = commit_result
-
-  #   query = "MATCH (p:person)-[v:visited]->(c:country) RETURN c.name, p, v"
-
-  #   # Execute the query
-  #   {:ok, query_result} = RedisGraph.query(conn, sample_graph.name, query)
-
-  #   assert is_nil(QueryResult.labels_added(query_result))
-  #   assert is_nil(QueryResult.nodes_created(query_result))
-  #   assert is_nil(QueryResult.nodes_deleted(query_result))
-  #   assert is_nil(QueryResult.properties_set(query_result))
-  #   assert is_nil(QueryResult.relationships_created(query_result))
-  #   assert is_nil(QueryResult.relationships_deleted(query_result))
-  #   assert is_binary(QueryResult.query_internal_execution_time(query_result))
-  # end
