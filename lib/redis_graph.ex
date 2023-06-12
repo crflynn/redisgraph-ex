@@ -70,9 +70,7 @@ defmodule RedisGraph do
 
 
   """
-  alias RedisGraph.Relationship
-  alias RedisGraph.Graph
-  alias RedisGraph.Node
+
   alias RedisGraph.QueryResult
   alias RedisGraph.Util
 
