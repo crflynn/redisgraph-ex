@@ -58,7 +58,10 @@ defmodule RedisGraph.Query do
   ```
   """
 
-  alias RedisGraph.{Relationship, QueryBuilder}
+  alias RedisGraph.{Node, Relationship, Util}
+
+
+  # MATCH, WHERE, ORDER BY, RETURN, RETURN DISTINCT, LIMIT, SKIP
 
   @type t() :: %__MODULE__{
           current_clause: clauses() | nil,
@@ -160,9 +163,9 @@ defmodule RedisGraph.Query do
   """
   @spec match(t()) :: t()
   def match(%{error: nil} = context) do
+    context = check_if_provided_context_has_correct_structure(context)
     context = add_clause_if_not_present(context, :match)
     context = check_if_return_clause_already_provided(context, :match)
-    context = check_if_provided_context_has_correct_structure(context)
     %{error: error} = context
     case error do
       nil -> Map.put(context, :current_clause, :match)
@@ -171,7 +174,7 @@ defmodule RedisGraph.Query do
   end
 
   def match(context) do
-    context
+    check_if_provided_context_has_correct_structure(context)
   end
 
   @doc """
@@ -190,9 +193,9 @@ defmodule RedisGraph.Query do
   """
   @spec optional_match(t()) :: t()
   def optional_match(%{error: nil} = context) do
+    context = check_if_provided_context_has_correct_structure(context)
     context = add_clause_if_not_present(context, :optional_match)
     context = check_if_return_clause_already_provided(context, :optional_match)
-    context = check_if_provided_context_has_correct_structure(context)
     %{error: error} = context
     case error do
       nil -> Map.put(context, :current_clause, :optional_match)
@@ -201,7 +204,7 @@ defmodule RedisGraph.Query do
   end
 
   def optional_match(context) do
-    context
+    check_if_provided_context_has_correct_structure(context)
   end
 
   @doc """
@@ -220,9 +223,9 @@ defmodule RedisGraph.Query do
   """
   @spec merge(t()) :: t()
   def merge(%{error: nil} = context) do
+    context = check_if_provided_context_has_correct_structure(context)
     context = add_clause_if_not_present(context, :merge)
     context = check_if_return_clause_already_provided(context, :merge)
-    context = check_if_provided_context_has_correct_structure(context)
     %{error: error} = context
     case error do
       nil -> Map.put(context, :current_clause, :merge)
@@ -231,7 +234,7 @@ defmodule RedisGraph.Query do
   end
 
   def merge(context) do
-    context
+    check_if_provided_context_has_correct_structure(context)
   end
 
   @doc """
@@ -250,9 +253,9 @@ defmodule RedisGraph.Query do
   """
   @spec create(t()) :: t()
   def create(%{error: nil} = context) do
+    context = check_if_provided_context_has_correct_structure(context)
     context = add_clause_if_not_present(context, :create)
     context = check_if_return_clause_already_provided(context, :create)
-    context = check_if_provided_context_has_correct_structure(context)
     %{error: error} = context
     case error do
       nil -> Map.put(context, :current_clause, :create)
@@ -261,7 +264,7 @@ defmodule RedisGraph.Query do
   end
 
   def create(context) do
-    context
+    check_if_provided_context_has_correct_structure(context)
   end
 
 
@@ -290,6 +293,8 @@ defmodule RedisGraph.Query do
   @spec delete(t(), atom()) :: t()
   def delete(%{error: nil} = context, alias) do
     current_clause = Map.get(context, :current_clause)
+
+    context = check_if_provided_context_has_correct_structure(context)
     context =
       if current_clause != :delete do
         context = add_clause_if_not_present(context, :delete)
@@ -301,7 +306,6 @@ defmodule RedisGraph.Query do
     context = check_if_match_ends_with_relationship(context)
     context = check_if_alias_is_atom(context, alias)
     context = check_if_match_or_create_or_merge_clause_provided(context, :delete)
-    context = check_if_provided_context_has_correct_structure(context)
 
     %{error: error} = context
 
@@ -316,7 +320,7 @@ defmodule RedisGraph.Query do
   end
 
   def delete(context, _alias) do
-    context
+    check_if_provided_context_has_correct_structure(context)
   end
 
   @doc """
@@ -386,6 +390,7 @@ defmodule RedisGraph.Query do
     node = RedisGraph.Node.new(%{alias: alias, labels: labels, properties: properties})
     last_element = Map.get(context, :last_element)
 
+    context = check_if_provided_context_has_correct_structure(context)
     context = check_if_alias_is_atom(context, alias)
     only_strings_in_labels_list? = Stream.map(labels, fn label -> is_binary(label) end) |> Enum.all?()
     context = if(only_strings_in_labels_list?) do
@@ -398,7 +403,6 @@ defmodule RedisGraph.Query do
         )
     end
     context = check_if_match_or_create_or_merge_clause_provided(context, "node()", false)
-    context = check_if_provided_context_has_correct_structure(context)
 
     # used_clauses_with_data = Map.get(context, :used_clauses_with_data, [])
 
@@ -453,15 +457,21 @@ defmodule RedisGraph.Query do
   end
 
   def node(%{error: nil} = context, alias, _labels, _properties) do
-    Map.put(
-      context,
-      :error,
-      "Wrong parameters provided to node(:#{alias})"
-    )
+    context = check_if_provided_context_has_correct_structure(context)
+    %{error: error} = context
+    case error do
+      nil ->
+        Map.put(
+          context,
+          :error,
+          "Wrong parameters provided to node(:#{alias})"
+        )
+      _ -> context
+    end
   end
 
   def node(context, _alias, _labels, _properties) do
-    context
+    check_if_provided_context_has_correct_structure(context)
   end
 
   @spec relationship_from_to(t(), atom(), String.t()) :: t()
@@ -534,6 +544,7 @@ defmodule RedisGraph.Query do
   def relationship_from_to(%{error: nil} = context, alias, type, properties) when is_binary(type) and is_map(properties) do
     last_element = Map.get(context, :last_element)
 
+    context = check_if_provided_context_has_correct_structure(context)
     context =
       if(is_nil(last_element)) do
         Map.put(
@@ -569,7 +580,6 @@ defmodule RedisGraph.Query do
       end
     context = check_if_alias_is_atom(context, alias)
     context = check_if_match_or_create_or_merge_clause_provided(context, "relationship_from_to()", false)
-    context = check_if_provided_context_has_correct_structure(context)
 
     # alias_present? = Map.get(context, :relationships, %{}) |> Map.has_key?(alias) or Map.get(context, :nodes, %{}) |> Map.has_key?(alias)
     # context = if(alias_present?) do
@@ -610,15 +620,21 @@ defmodule RedisGraph.Query do
   end
 
   def relationship_from_to(%{error: nil} = context, alias, _type, _properties) do
-    Map.put(
-      context,
-      :error,
-      "Wrong parameters provided to relationship_from_to(:#{alias})"
-    )
+    context = check_if_provided_context_has_correct_structure(context)
+    %{error: error} = context
+    case error do
+      nil ->
+        Map.put(
+          context,
+          :error,
+          "Wrong parameters provided to relationship_from_to(:#{alias})"
+        )
+      _ -> context
+    end
   end
 
   def relationship_from_to(context, _alias, _type, _properties) do
-    context
+    check_if_provided_context_has_correct_structure(context)
   end
 
 
@@ -692,6 +708,7 @@ defmodule RedisGraph.Query do
   def relationship_to_from(%{error: nil} = context, alias, type, properties) when is_binary(type) and is_map(properties) do
     last_element = Map.get(context, :last_element)
 
+    context = check_if_provided_context_has_correct_structure(context)
     context =
       if(is_nil(last_element)) do
         Map.put(
@@ -727,7 +744,6 @@ defmodule RedisGraph.Query do
       end
     context = check_if_alias_is_atom(context, alias)
     context = check_if_match_or_create_or_merge_clause_provided(context, "relationship_to_from()", false)
-    context = check_if_provided_context_has_correct_structure(context)
 
     # alias_present? = Map.get(context, :relationships, %{}) |> Map.has_key?(alias) or Map.get(context, :nodes, %{}) |> Map.has_key?(alias)
     # context = if(alias_present?) do
@@ -768,15 +784,21 @@ defmodule RedisGraph.Query do
   end
 
   def relationship_to_from(%{error: nil} = context, alias, _type, _properties) do
-    Map.put(
-      context,
-      :error,
-      "Wrong parameters provided to relationship_to_from(:#{alias})"
-    )
+    context = check_if_provided_context_has_correct_structure(context)
+    %{error: error} = context
+    case error do
+      nil ->
+        Map.put(
+          context,
+          :error,
+          "Wrong parameters provided to relationship_to_from(:#{alias})"
+        )
+      _ -> context
+    end
   end
 
   def relationship_to_from(context, _alias, _type, _properties) do
-    context
+    check_if_provided_context_has_correct_structure(context)
   end
 
   @doc """
@@ -838,11 +860,23 @@ defmodule RedisGraph.Query do
   end
 
   defp where(%{error: nil} = context, _alias, "", _operator, _value, _logical_operator) do
-    Map.put(context, :error, "Provide property name. E.g. new() |> match() |> node(:n) |> where(:n, \"age\", :bigger, 20}) |> return(:n) |> ...")
+    context = check_if_provided_context_has_correct_structure(context)
+    %{error: error} = context
+    case error do
+      nil ->
+        Map.put(context, :error, "Provide property name. E.g. new() |> match() |> node(:n) |> where(:n, \"age\", :bigger, 20}) |> return(:n) |> ...")
+      _ -> context
+    end
   end
 
   defp where(%{error: nil} = context, _alias, _property, _operator, "", _logical_operator) do
-    Map.put(context, :error, "Value can't be of empty string. E.g. new() |> match() |> node(:n) |> where({:n, \"age\", :contains, \"A\") |> return(:n) |> ...")
+    context = check_if_provided_context_has_correct_structure(context)
+    %{error: error} = context
+    case error do
+      nil ->
+        Map.put(context, :error, "Value can't be of empty string. E.g. new() |> match() |> node(:n) |> where({:n, \"age\", :contains, \"A\") |> return(:n) |> ...")
+      _ -> context
+    end
   end
 
   defp where(%{error: nil} = context, alias, property, operator, value, logical_operator) do
@@ -850,6 +884,7 @@ defmodule RedisGraph.Query do
     # where or where_not put as first element and rest should be after it. where/where_not can be only once and after that only and/or func can be used
     current_clause = Map.get(context, :current_clause)
 
+    context = check_if_provided_context_has_correct_structure(context)
     context =
       if current_clause != :where do
         context = add_clause_if_not_present(context, :where)
@@ -879,7 +914,6 @@ defmodule RedisGraph.Query do
     context = check_if_match_ends_with_relationship(context)
     context = check_if_alias_is_atom(context, alias)
     context = check_if_match_or_create_or_merge_clause_provided(context, :where)
-    context = check_if_provided_context_has_correct_structure(context)
     context = if(Map.has_key?(@accepted_operator_to_string_in_where_clause, operator)) do
       context
     else
@@ -922,7 +956,7 @@ defmodule RedisGraph.Query do
   end
 
   defp where(context, _alias, _property, _operator, _value, _logical_operator) do
-    context
+    check_if_provided_context_has_correct_structure(context)
   end
 
   @doc """
@@ -1192,13 +1226,6 @@ defmodule RedisGraph.Query do
     where(context, alias, property, operator, value, :xor_not)
   end
 
-  @spec order_by(t(), atom(), String.t(), boolean()) :: t()
-  def order_by(context, alias, property, asc \\ true)
-
-  def order_by(%{error: nil} = context, _alias, "", _asc) do
-    Map.put(context, :error, "Provide property name. E.g. new() |> match() |> node(:n) |> order_by(:n, \"age\") |> return(:n) |> ...")
-  end
-
   @doc """
   Add `ORDER BY` clause into the context and receive the updated context.
   Provide the `context`, `alias` (as atom) of the entity, a `property`
@@ -1223,9 +1250,23 @@ defmodule RedisGraph.Query do
   # "Provide property name. E.g. new() |> match() |> node(:n) |> order_by(:n, \"age\") |> return(:n) |> ..."
   ```
   """
+  @spec order_by(t(), atom(), String.t(), boolean()) :: t()
+  def order_by(context, alias, property, asc \\ true)
+
+  def order_by(%{error: nil} = context, _alias, "", _asc) do
+    context = check_if_provided_context_has_correct_structure(context)
+    %{error: error} = context
+    case error do
+      nil ->
+        Map.put(context, :error, "Provide property name. E.g. new() |> match() |> node(:n) |> order_by(:n, \"age\") |> return(:n) |> ...")
+      _ -> context
+    end
+  end
+
   def order_by(%{error: nil} = context, alias, property, asc) when is_binary(property) do
     current_clause = Map.get(context, :current_clause)
 
+    context = check_if_provided_context_has_correct_structure(context)
     context =
       if current_clause != :order_by do
         context = add_clause_if_not_present(context, :order_by)
@@ -1237,7 +1278,6 @@ defmodule RedisGraph.Query do
     context = check_if_match_ends_with_relationship(context)
     context = check_if_alias_is_atom(context, alias)
     context = check_if_match_or_create_or_merge_clause_provided(context, :order_by)
-    context = check_if_provided_context_has_correct_structure(context)
 
     %{error: error} = context
 
@@ -1255,11 +1295,17 @@ defmodule RedisGraph.Query do
   end
 
   def order_by(%{error: nil} = context, _alias, _property, _asc) do
-    Map.put(context, :error, "Provide property name as string. E.g. new() |> match() |> node(:n) |> order_by(:n, \"age\") |> return(:n) |> ...")
+    context = check_if_provided_context_has_correct_structure(context)
+    %{error: error} = context
+    case error do
+      nil ->
+        Map.put(context, :error, "Wrong parameters provided. E.g. new() |> match() |> node(:n) |> order_by(:n, \"age\") |> return(:n) |> ...")
+      _ -> context
+    end
   end
 
   def order_by(context, _alias, _property, _asc) do
-    context
+    check_if_provided_context_has_correct_structure(context)
   end
 
   @doc """
@@ -1288,6 +1334,7 @@ defmodule RedisGraph.Query do
   def limit(%{error: nil} = context, number) do
     current_clause = Map.get(context, :current_clause)
 
+    context = check_if_provided_context_has_correct_structure(context)
     context =
       if current_clause != :limit do
         context = add_clause_if_not_present(context, :limit)
@@ -1302,7 +1349,6 @@ defmodule RedisGraph.Query do
         Map.put(context, :error, "Wrong number parameter was probided, only non negatibe integers supported. E.g. new() |> match() |> node(:n) |> return(:n) |> limit(10)|> build_query()")
       end
     context = check_if_match_or_create_or_merge_clause_provided(context, :limit)
-    context = check_if_provided_context_has_correct_structure(context)
 
     %{error: error} = context
 
@@ -1318,7 +1364,7 @@ defmodule RedisGraph.Query do
   end
 
   def limit(context, _number) do
-    context
+    check_if_provided_context_has_correct_structure(context)
   end
 
   @doc """
@@ -1347,6 +1393,7 @@ defmodule RedisGraph.Query do
   def skip(%{error: nil} = context, number) do
     current_clause = Map.get(context, :current_clause)
 
+    context = check_if_provided_context_has_correct_structure(context)
     context =
       if current_clause != :skip do
         context = add_clause_if_not_present(context, :skip)
@@ -1363,7 +1410,6 @@ defmodule RedisGraph.Query do
 
     context = check_if_match_ends_with_relationship(context)
     context = check_if_match_or_create_or_merge_clause_provided(context, :skip)
-    context = check_if_provided_context_has_correct_structure(context)
 
     %{error: error} = context
 
@@ -1379,7 +1425,7 @@ defmodule RedisGraph.Query do
   end
 
   def skip(context, _number) do
-    context
+    check_if_provided_context_has_correct_structure(context)
   end
 
   @doc """
@@ -1569,16 +1615,29 @@ defmodule RedisGraph.Query do
           boolean()
         ) :: t()
   defp return_function_and_property(%{error: nil} = context, "", _alias, _property, _asc, _distinct) do
-    Map.put(context, :error, "Provide function name. E.g. new() |> match() |> node(:n) |> return_function(\"toUpper\", :n) |> ...")
+    context = check_if_provided_context_has_correct_structure(context)
+    %{error: error} = context
+    case error do
+      nil ->
+        Map.put(context, :error, "Provide function name. E.g. new() |> match() |> node(:n) |> return_function(\"toUpper\", :n) |> ...")
+      _ -> context
+    end
   end
 
   defp return_function_and_property(%{error: nil} = context, _function, _alias, "", _asc, _distinct) do
-    Map.put(context, :error, "Provide property name. E.g. new() |> match() |> node(:n) |> return_property(:n, \"age\") |> ...")
+    context = check_if_provided_context_has_correct_structure(context)
+    %{error: error} = context
+    case error do
+      nil ->
+        Map.put(context, :error, "Provide property name. E.g. new() |> match() |> node(:n) |> return_property(:n, \"age\") |> ...")
+      _ -> context
+    end
   end
 
   defp return_function_and_property(%{error: nil} = context, function, alias, property, as, distinct) do
     clause = if(distinct == false, do: :return, else: :return_distinct)
     current_clause = Map.get(context, :current_clause)
+    context = check_if_provided_context_has_correct_structure(context)
     context =
       if current_clause != clause do
         context = add_clause_if_not_present(context, clause)
@@ -1628,7 +1687,7 @@ defmodule RedisGraph.Query do
   end
 
   defp return_function_and_property(context, _function, _alias, _property, _as,  _distinct) do
-    context
+    check_if_provided_context_has_correct_structure(context)
   end
 
   @doc """
@@ -1758,16 +1817,29 @@ defmodule RedisGraph.Query do
   def with_function_and_property(context, function, alias, property, as \\ nil)
 
   def with_function_and_property(%{error: nil} = context, "", _alias, _property, _as) do
-    Map.put(context, :error, "Provide function name. E.g. new() |> match() |> node(:n) |> with_function_and_property(\"toUpper\", :n, \"name\", :Name) |> return(:Name) |>...")
+    context = check_if_provided_context_has_correct_structure(context)
+    %{error: error} = context
+    case error do
+      nil ->
+        Map.put(context, :error, "Provide function name. E.g. new() |> match() |> node(:n) |> with_function_and_property(\"toUpper\", :n, \"name\", :Name) |> return(:Name) |>...")
+      _ -> context
+    end
   end
 
   def with_function_and_property(%{error: nil} = context, _function, _alias, "", _as) do
-    Map.put(context, :error, "Provide property name. E.g. new() |> match() |> node(:n) |> with_function_and_property(\"toUpper\", :n, \"name\", :Name) |> return(:Name) |> ...")
+    context = check_if_provided_context_has_correct_structure(context)
+    %{error: error} = context
+    case error do
+      nil ->
+        Map.put(context, :error, "Provide property name. E.g. new() |> match() |> node(:n) |> with_function_and_property(\"toUpper\", :n, \"name\", :Name) |> return(:Name) |> ...")
+      _ -> context
+    end
   end
 
   def with_function_and_property(%{error: nil} = context, function, alias, property, as) do
     current_clause = Map.get(context, :current_clause)
 
+    context = check_if_provided_context_has_correct_structure(context)
     context =
       if current_clause != :with do
         context = add_clause_if_not_present(context, :with)
@@ -1801,7 +1873,6 @@ defmodule RedisGraph.Query do
     context = check_if_match_ends_with_relationship(context)
     context = check_if_alias_is_atom(context, alias)
     context = check_if_match_or_create_or_merge_clause_provided(context, :with)
-    context = check_if_provided_context_has_correct_structure(context)
 
     %{error: error} = context
 
@@ -2107,7 +2178,13 @@ defmodule RedisGraph.Query do
   defp set_property_on(context, alias, property, value, operator, on)
 
   defp set_property_on(%{error: nil} = context, _alias, "", _value, _operator, _on) do
-    Map.put(context, :error, "Provide property name. E.g. new() |> match() |> node(:n) |> set_property(:n, \"name\", :Name) |> return(:n) |> ...")
+    context = check_if_provided_context_has_correct_structure(context)
+    %{error: error} = context
+    case error do
+      nil ->
+        Map.put(context, :error, "Provide property name. E.g. new() |> match() |> node(:n) |> set_property(:n, \"name\", :Name) |> return(:n) |> ...")
+      _ -> context
+    end
   end
 
   defp set_property_on(%{error: nil} = context, alias, property, value, operator, on) do
@@ -2117,6 +2194,8 @@ defmodule RedisGraph.Query do
       :create -> :on_create_set
     end
     current_clause = Map.get(context, :current_clause)
+
+    context = check_if_provided_context_has_correct_structure(context)
     context = if current_clause != clause do
         context = add_clause_if_not_present(context, clause)
         Map.put(context, :current_clause, clause)
@@ -2165,7 +2244,7 @@ defmodule RedisGraph.Query do
           end
         context
       end
-    context = check_if_provided_context_has_correct_structure(context)
+
     %{error: error} = context
 
     case error do
@@ -2180,7 +2259,7 @@ defmodule RedisGraph.Query do
   end
 
   defp set_property_on(context, _alias, _property, _value, _operator, _on) do
-    context
+    check_if_provided_context_has_correct_structure(context)
   end
 
   @doc """
@@ -2205,12 +2284,236 @@ defmodule RedisGraph.Query do
   # "Please instantiate the query first with new(). Istead have e.g. new() |> match |> node(:n) |> return(:n) |> build_query()"
   ```
   """
+  # @spec build_query(t()) :: {:ok, String.t()} | {:error, String.t()}
+  # def build_query(context) do
+  #   context = check_if_match_ends_with_relationship(context)
+  #   context = check_if_return_clause_is_provided_in_case_match_clause_is_present(context)
+  #   context = check_if_provided_context_has_correct_structure(context)
+  #   QueryBuilder.build_query(context)
+  # end
+
   @spec build_query(t()) :: {:ok, String.t()} | {:error, String.t()}
-  def build_query(context) do
+  def build_query(%{error: nil} = context) do
+    context = check_if_provided_context_has_correct_structure(context)
     context = check_if_match_ends_with_relationship(context)
     context = check_if_return_clause_is_provided_in_case_match_clause_is_present(context)
+    %{error: error} = context
+    case error do
+      nil ->
+        %{used_clauses_with_data: used_clauses_with_data} = context
+        query_list =
+          Stream.map(used_clauses_with_data, fn used_clause_with_data ->
+            %{clause: clause, elements: elements} = used_clause_with_data
+
+            case clause do
+              :create -> build_query_for_general_clause(context, clause, elements)
+              :match -> build_query_for_general_clause(context, clause, elements)
+              :optional_match -> build_query_for_general_clause(context, clause, elements)
+              :merge -> build_query_for_general_clause(context, clause, elements)
+              :delete -> build_query_for_delete_clause(context, elements)
+              :set -> build_query_for_set_clause(context, clause, elements)
+              :on_match_set -> build_query_for_set_clause(context, clause, elements)
+              :on_create_set -> build_query_for_set_clause(context, clause, elements)
+              :where -> build_query_for_where_clause(context, elements)
+              :order_by -> build_query_for_order_by_clause(context, elements)
+              :limit -> build_query_for_limit_or_skip_clause(context, clause, elements)
+              :skip -> build_query_for_limit_or_skip_clause(context, clause, elements)
+              :with -> build_query_for_return_or_with_clause(context, clause, elements)
+              :return -> build_query_for_return_or_with_clause(context, clause, elements)
+              :return_distinct -> build_query_for_return_or_with_clause(context, clause, elements)
+              _ -> "!!!Provided clause -- #{clause} is not yet supported!!!"
+            end
+          end)
+
+        final_query = Enum.join(query_list, " ")
+        {:ok, final_query}
+      _ -> {:error, error}
+    end
+  end
+
+  def build_query(context) do
     context = check_if_provided_context_has_correct_structure(context)
-    QueryBuilder.build_query(context)
+    %{error: error} = context
+    {:error, error}
+  end
+
+  @spec build_query_for_general_clause(Query.t(), atom(), list(map())) :: String.t()
+  defp build_query_for_general_clause(context, clause, elements) do
+    {_last_element, query} =
+      Enum.reduce(elements, {nil, ""}, fn element_alias, acc ->
+        {last_element, query} = acc
+        node = Map.get(context, :nodes, %{}) |> Map.get(element_alias, nil)
+        relationship = Map.get(context, :relationships, %{}) |> Map.get(element_alias, nil)
+
+        cond do
+          is_struct(node, Node) and is_struct(last_element, Node) ->
+            last_element = node
+
+            query =
+              query <>
+                ",(#{Util.value_to_string(node.alias)}#{Util.labels_to_string(node.labels)}#{Util.properties_to_string(node.properties)})"
+
+            {last_element, query}
+
+          is_struct(node, Node) ->
+            last_element = node
+
+            query =
+              query <>
+                "(#{Util.value_to_string(node.alias)}#{Util.labels_to_string(node.labels)}#{Util.properties_to_string(node.properties)})"
+
+            {last_element, query}
+
+          is_struct(relationship, Relationship) and is_struct(last_element, Node) and
+              relationship.src_node.alias == last_element.alias ->
+            last_element = relationship
+
+            query =
+              query <>
+                "-[#{Util.value_to_string(relationship.alias)}#{Util.type_to_string(relationship.type)}#{Util.properties_to_string(relationship.properties)}]->"
+
+            {last_element, query}
+
+          is_struct(relationship, Relationship) and is_struct(last_element, Node) and
+              relationship.dest_node.alias == last_element.alias ->
+            last_element = relationship
+
+            query =
+              query <>
+                "<-[#{Util.value_to_string(relationship.alias)}#{Util.type_to_string(relationship.type)}#{Util.properties_to_string(relationship.properties)}]-"
+
+            {last_element, query}
+
+          true ->
+            last_element = nil
+            query = query <> "!!!something went wrong, check the query!!!"
+            {last_element, query}
+        end
+      end)
+
+    clause_to_string = Atom.to_string(clause) |> String.replace("_", " ") |> String.upcase()
+    "#{clause_to_string} #{query}"
+  end
+
+  @spec build_query_for_where_clause(Query.t(), list(map())) :: String.t()
+  defp build_query_for_where_clause(_context, elements) do
+    query_list =
+      Stream.map(elements, fn element ->
+        %{logical_operator: logical_operator, elements: elements_per_logical_operator} = element
+
+        logical_operator_to_string =
+          if(logical_operator == :none,
+            do: "",
+            else:
+              (Atom.to_string(logical_operator) |> String.replace("_", " ") |> String.upcase()) <>
+                " "
+          )
+
+        inner_query_list =
+          Stream.map(elements_per_logical_operator, fn element_per_logical_operator ->
+            %{alias: alias, property: property, operator: operator, value: value} =
+              element_per_logical_operator
+
+            "#{logical_operator_to_string}#{Util.value_to_string(alias)}.#{property} #{operator} #{Util.value_to_string(value)}"
+          end)
+
+        Enum.join(inner_query_list, " ")
+      end)
+
+    query_list_joined = Enum.join(query_list, " ")
+    "WHERE #{query_list_joined}"
+  end
+
+  @spec build_query_for_return_or_with_clause(Query.t(), atom(), list(map())) :: String.t()
+  defp build_query_for_return_or_with_clause(_context, clause, elements) do
+    clause_to_string = Atom.to_string(clause) |> String.replace("_", " ") |> String.upcase()
+    query_list =
+      Stream.map(elements, fn element ->
+        %{alias: alias, property: property, function: function, as: as} = element
+
+        cond do
+          not is_nil(alias) and not is_nil(property) and not is_nil(function) and not is_nil(as) ->
+            "#{function}(#{Util.value_to_string(alias)}.#{property}) AS #{as}"
+
+          not is_nil(alias) and not is_nil(property) and not is_nil(function) ->
+            "#{function}(#{Util.value_to_string(alias)}.#{property})"
+
+          not is_nil(alias) and not is_nil(function) and not is_nil(as) ->
+            "#{function}(#{Util.value_to_string(alias)}) AS #{as}"
+
+          not is_nil(alias) and not is_nil(function) ->
+            "#{function}(#{Util.value_to_string(alias)})"
+
+          not is_nil(alias) and not is_nil(property) and not is_nil(as) ->
+            "#{Util.value_to_string(alias)}.#{property} AS #{as}"
+
+          not is_nil(alias) and not is_nil(property) ->
+            "#{Util.value_to_string(alias)}.#{property}"
+
+          not is_nil(alias) and not is_nil(as) ->
+            "#{Util.value_to_string(alias)} AS #{as}"
+
+          not is_nil(alias) ->
+            "#{Util.value_to_string(alias)}"
+
+          true ->
+            "Wrong parameters provided to #{clause} function"
+        end
+      end)
+
+    query_list_joined = Enum.join(query_list, ", ")
+    "#{clause_to_string} #{query_list_joined}"
+  end
+
+  @spec build_query_for_order_by_clause(Query.t(), list(map())) :: String.t()
+  defp build_query_for_order_by_clause(_context, elements) do
+    query_list =
+      Stream.map(elements, fn element ->
+        %{property: property, alias: alias, order: order} = element
+        "#{Util.value_to_string(alias)}.#{property} #{order}"
+      end)
+
+    query_list_joined = Enum.join(query_list, ", ")
+    "ORDER BY #{query_list_joined}"
+  end
+
+  @spec build_query_for_set_clause(Query.t(), atom(), list(map())) :: String.t()
+  defp build_query_for_set_clause(_context, clause, elements) do
+    clause_to_string =
+      if(clause == :set,
+        do: "SET",
+        else:
+          (Atom.to_string(clause) |> String.replace("_", " ") |> String.upcase())
+      )
+    query_list =
+      Stream.map(elements, fn element ->
+        %{alias: alias, property: property, operator: operator, value: value} = element
+        "#{Util.value_to_string(alias)} #{operator} #{Util.value_to_string(value)}"
+        cond do
+          not is_nil(alias) and not is_nil(property) ->
+            "#{Util.value_to_string(alias)}.#{property} #{operator} #{Util.value_to_string(value)}"
+          not is_nil(alias) ->
+            "#{Util.value_to_string(alias)} #{operator} #{Util.value_to_string(value)}"
+          true ->
+            "Wrong parameters provided to #{clause} function"
+        end
+      end)
+
+    query_list_joined = Enum.join(query_list, ", ")
+    "#{clause_to_string} #{query_list_joined}"
+  end
+
+  @spec build_query_for_delete_clause(Query.t(), list(map())) :: String.t()
+  defp build_query_for_delete_clause(_context, elements) do
+    query_list = Enum.join(elements, ", ")
+    "DELETE #{query_list}"
+  end
+
+  @spec build_query_for_limit_or_skip_clause(Query.t(), atom(), list(map())) :: String.t()
+  defp build_query_for_limit_or_skip_clause(_context, clause, elements) do
+    clause_to_string = Atom.to_string(clause) |> String.upcase()
+    query_list = Enum.map(elements, fn element -> "#{clause_to_string} #{element}" end)
+    Enum.join(query_list, " ")
   end
 
   @spec add_clause_if_not_present(t(), atom()) :: t()
